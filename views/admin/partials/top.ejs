@@ -1,0 +1,25 @@
+<%- include('../../shared/head', { bodyClass: 'admin' }) %>
+<div class="shell">
+  <aside class="side">
+    <%- include('../../shared/logo', { light: true }) %>
+    <p class="side-label">Organization</p>
+    <nav>
+      <% [['overview','/admin','grid','Overview'],['organization','/admin/organization','building','Organization'],['members','/admin/members','userplus','Members'],['applications','/admin/applications','file','Applications'],['events','/admin/events','calendar','Events'],['reports','/admin/reports','chart','Reports']].forEach(function (n) { %>
+        <a href="<%= n[1] %>" class="<%= locals.active === n[0] ? 'on' : '' %>"><%- icon(n[2], 22) %><span><%= n[3] %></span><% if (n[0] === 'applications' && badge > 0) { %><em class="count"><%= badge %></em><% } %></a>
+      <% }) %>
+    </nav>
+    <div class="side-bottom">
+      <a href="/admin/settings" class="<%= locals.active === 'settings' ? 'on' : '' %>"><%- icon('settings', 22) %><span>Settings</span></a>
+      <a href="/logout"><%- icon('logout', 22) %><span>Log out</span></a>
+      <div class="me">
+        <span class="avatar"><%= initials(me.name) %><i class="online"></i></span>
+        <div><strong><%= me.name %></strong><small><%= org.name %> admin</small></div>
+      </div>
+    </div>
+  </aside>
+  <div class="stage">
+    <header class="admin-top">
+      <form class="search wide" action="/admin/members" method="get"><%- icon('search', 20) %><input name="q" placeholder="Search members, applications…" autocomplete="off"><kbd>⌘ K</kbd></form>
+      <%- include('../../shared/tools') %>
+    </header>
+    <main class="content">

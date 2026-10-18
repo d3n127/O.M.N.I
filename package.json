@@ -1,0 +1,21 @@
+{
+  "name": "fourloopgroup",
+  "version": "1.0.0",
+  "description": "4loopGroup - student organization portal (Express + EJS + MySQL)",
+  "main": "app.js",
+  "scripts": {
+    "setup": "node setup.js",
+    "start": "nodemon app.js",
+    "dev": "node --watch app.js"
+  },
+  "dependencies": {
+    "ejs": "^3.1.10",
+    "express": "^4.22.3",
+    "express-session": "^1.18.1",
+    "mysql2": "^3.11.0",
+    "nodemon": "^3.1.14"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

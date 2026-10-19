@@ -1,8 +1,9 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
-const cfg = require('./config');
-const db = require('./conn');
+const db = require('./config').promise();
+db.config.dateStrings = true; // DATE columns come back as "YYYY-MM-DD" (views call .slice())
+db.on('error', (err) => console.error('MySQL error (is MySQL running? run "npm run setup" if fourloop_db is missing):', err.message));
 const { viewHelpers } = require('./utils');
 const { wrap } = require('./middleware');
 
@@ -58,6 +59,6 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something went wrong. Check the server console. <a href="/">Go home</a>');
 });
 
-app.listen(cfg.port, () => {
-  console.log(`4loopGroup running at http://localhost:${cfg.port}`);
+app.listen(3000, () => {
+  console.log('4loopGroup running at http://localhost:3000');
 });

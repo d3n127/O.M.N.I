@@ -1,4 +1,4 @@
-const db = require('../conn');
+const db = require('../config').promise();
 
 /* Shared application body of FR-STUDENT-3 and FR-NONMEMBER-3 — one implementation so both
    portals validate and write identically (divergence is a defect, spec-nonmember §5). */

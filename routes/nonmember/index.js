@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../../conn');
+const db = require('../../config').promise();
 const { wrap, requireRole, requireNonMember } = require('../../middleware');
 const { applyToOrg } = require('../apply');
 

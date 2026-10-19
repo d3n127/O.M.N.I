@@ -1,0 +1,14 @@
+<%- include('../../shared/head') %>
+<header class="topbar">
+  <%- include('../../shared/logo') %>
+  <nav class="topnav">
+    <% [['home','/nonmember','grid','Home'],['discover','/nonmember/discover','compass','Discover'],['events','/nonmember/events','calendar','Events']].forEach(function (n) { %>
+      <a href="<%= n[1] %>" class="<%= locals.active === n[0] ? 'on' : '' %>"><%- icon(n[2], 18) %><%= n[3] %></a>
+    <% }) %>
+  </nav>
+  <div class="tools">
+    <form class="search" action="/nonmember/discover" method="get"><%- icon('search', 18) %><input name="q" placeholder="Search…" value="<%= locals.q || '' %>" autocomplete="off"><kbd>⌘ K</kbd></form>
+    <%- include('../../shared/tools') %>
+  </div>
+</header>
+<main class="wrap">

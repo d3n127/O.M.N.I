@@ -8,7 +8,7 @@
       <p class="sub" id="applySub">Tell the team why this community feels like the right fit for you.</p>
       <div class="facts" id="applyFacts"></div>
       <div class="notice" id="applyNotice" hidden></div>
-      <form id="applyForm" novalidate>
+      <form id="applyForm" novalidate data-endpoint="<%= locals.applyEndpoint || '/student/apply' %>">
         <input type="hidden" name="org_id" id="applyOrg">
         <label for="applyIntro">Your short introduction</label>
         <textarea id="applyIntro" name="intro" rows="4" placeholder="Share your interests, experience, or what you hope to learn…"></textarea>

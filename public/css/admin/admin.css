@@ -52,6 +52,8 @@
 .pulse p { font-size: 13px; opacity: .85; max-width: 26ch; margin: 14px 0; position: relative; z-index: 1; }
 .pulse a { font-weight: 700; font-size: 13px; display: inline-flex; gap: 8px; align-items: center; position: relative; z-index: 1; }
 .feature { background: #fff; border: 1px solid var(--line); border-radius: 20px; padding: 18px 24px; display: flex; align-items: center; gap: 20px; }
+.up-next { margin-top: 30px; }
+.up-next .ev-admin:last-child { margin-bottom: 0; }
 .grow { flex: 1; }
 .grow h3 { font-size: 22px; margin: 4px 0 2px; }
 .grow small { color: var(--muted); }

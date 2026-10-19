@@ -53,4 +53,24 @@
     <a class="btn small" href="/admin/events?new=1">Create event</a>
   <% } %>
 </section>
+
+<section class="up-next">
+  <div class="block-head">
+    <div><p class="eyebrow">Your calendar</p><h2>Upcoming events</h2></div>
+  </div>
+  <% if (!upcoming.length) { %>
+    <div class="ev-admin">
+      <div class="grow"><h3>Nothing scheduled yet</h3><small>Create an event to give members something to join.</small></div>
+      <a class="btn small" href="/admin/events?new=1">Create event <%- icon('plus', 16) %></a>
+    </div>
+  <% } %>
+  <% var tiles = ['yellow','teal','lime','lilac']; upcoming.forEach(function (e, i) { %>
+    <div class="ev-admin">
+      <span class="date-tile <%= tiles[i % 4] %>"><small><%= fmtMon(e.event_date) %></small><b><%= fmtDay(e.event_date) %></b></span>
+      <div class="grow"><h3><%= e.title %></h3><small><%= fmtTime(e.event_time) %> · <%= e.location %></small></div>
+      <div class="rsvp"><strong><%= e.rsvps %></strong><small>RSVPs</small></div>
+      <a class="btn outline small" href="/admin/events">Manage <%- icon('arrow', 16) %></a>
+    </div>
+  <% }) %>
+</section>
 <%- include('partials/bottom') %>

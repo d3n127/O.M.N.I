@@ -61,7 +61,7 @@
     var intro = $('#applyIntro').value.trim();
     if (!intro) return showErr('Write a short introduction so the team can get to know you.');
     if (!$('#applyAgree').checked) return showErr('Agree to share your student profile to continue.');
-    fetch('/student/apply', {
+    fetch(form.dataset.endpoint || '/student/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ org_id: $('#applyOrg').value, intro: intro, agree: true })

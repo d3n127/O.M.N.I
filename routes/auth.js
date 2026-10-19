@@ -1,23 +1,27 @@
 const express = require('express');
 const db = require('../conn');
 const { hashPassword, verifyPassword, initials } = require('../utils');
-const { wrap } = require('../middleware');
+const { wrap, hasOrg } = require('../middleware');
 
 const router = express.Router();
 const ROLES = ['student', 'admin'];
 const DEMO = { student: '', admin: '' };
 const COLORS = ['yellow', 'teal', 'lime', 'lilac'];
 
-const home = (u) => (u.role === 'admin' ? '/admin' : '/student');
+// membership-aware landing (FR-NONMEMBER-6): officers -> /admin, students with 0 orgs -> /nonmember
+async function home(u) {
+  if (u.role === 'admin') return '/admin';
+  return (await hasOrg(u.id)) > 0 ? '/student' : '/nonmember';
+}
 
 function renderAuth(res, role, mode, error, values = {}) {
   res.status(error ? 400 : 200).render('shared/auth', { role, mode, error, values, demo: DEMO[role] });
 }
 
-router.get('/', (req, res) => {
-  if (req.session.user) return res.redirect(home(req.session.user));
+router.get('/', wrap(async (req, res) => {
+  if (req.session.user) return res.redirect(await home(req.session.user));
   res.render('shared/index');
-});
+}));
 
 router.get('/login/:role', (req, res) => {
   const { role } = req.params;
@@ -34,7 +38,7 @@ router.post('/auth/login', wrap(async (req, res) => {
   }
   const u = rows[0];
   req.session.user = { id: u.id, name: u.full_name, role: u.role, org_id: u.org_id };
-  res.redirect(home(req.session.user));
+  res.redirect(await home(req.session.user));
 }));
 
 router.post('/auth/register', wrap(async (req, res) => {
@@ -64,7 +68,7 @@ router.post('/auth/register', wrap(async (req, res) => {
   const [u] = await db.query('INSERT INTO users (full_name, email, password_hash, role, org_id) VALUES (?,?,?,?,?)',
     [name, email, hashPassword(password), role, orgId]);
   req.session.user = { id: u.insertId, name, role, org_id: orgId };
-  res.redirect(home(req.session.user));
+  res.redirect(await home(req.session.user));
 }));
 
 router.get('/logout', (req, res) => {

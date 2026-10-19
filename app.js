@@ -43,6 +43,7 @@ app.use(wrap(async (req, res, next) => {
 
 app.use('/', require('./routes/auth'));
 app.use('/student', require('./routes/student'));
+app.use('/nonmember', require('./routes/nonmember'));
 app.use('/admin', require('./routes/admin'));
 
 app.post('/notifications/read', wrap(async (req, res) => {

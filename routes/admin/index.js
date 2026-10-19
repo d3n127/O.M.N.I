@@ -9,6 +9,9 @@ router.use(requireRole('admin'));
 const ROLES = ['President', 'Vice President', 'Events Lead', 'Treasurer', 'Secretary', 'Member'];
 const CATEGORIES = ['Technology', 'Creative', 'Academic', 'Sports', 'Community', 'Business'];
 
+// same visibility predicate as routes/student/index.js (spec-events §2.1)
+const UPCOMING = "e.status = 'published' AND e.event_date >= CURDATE()";
+
 // load this admin's organization + pending badge for every admin page
 router.use(wrap(async (req, res, next) => {
   const [[org]] = await db.query('SELECT * FROM organizations WHERE id = ?', [req.session.user.org_id]);
@@ -53,9 +56,12 @@ router.get('/', wrap(async (req, res) => {
   const [recent] = await db.query(`
     SELECT a.*, u.full_name, u.program, u.year_level FROM applications a JOIN users u ON u.id = a.user_id
     WHERE a.org_id = ? ORDER BY a.created_at DESC, a.id DESC LIMIT 3`, [org.id]);
-  const [[featured]] = await db.query(`
-    SELECT * FROM events WHERE org_id = ? AND status = 'published' AND event_date >= CURDATE()
-    ORDER BY event_date, event_time LIMIT 1`, [org.id]);
+  // FR-EVENTS-7: next 5 upcoming published events of this org, each with its RSVP count
+  const [upcoming] = await db.query(`
+    SELECT e.*, (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id) AS rsvps
+    FROM events e WHERE e.org_id = ? AND ${UPCOMING}
+    ORDER BY e.event_date, e.event_time LIMIT 5`, [org.id]);
+  const featured = upcoming[0] || null;
   let going = [], goingCount = 0;
   if (featured) {
     [going] = await db.query('SELECT u.full_name FROM rsvps r JOIN users u ON u.id = r.user_id WHERE r.event_id = ? LIMIT 3', [featured.id]);
@@ -64,7 +70,7 @@ router.get('/', wrap(async (req, res) => {
   const now = new Date();
   const hour = now.getHours();
   res.render('admin/overview', {
-    title: 'Overview', active: 'overview', stats, recent, featured, going, goingCount,
+    title: 'Overview', active: 'overview', stats, recent, featured, upcoming, going, goingCount,
     greeting: hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening',
     today: now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' }),
     firstName: req.session.user.name.split(' ')[0]

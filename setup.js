@@ -1,7 +1,7 @@
 // Run once:  npm run setup
 // Creates the database, all tables and demo data. WARNING: it resets the database.
 const mysql = require('mysql2/promise');
-const cfg = require('./config');
+const cfg = require('./conn');
 cfg.on('error', () => {}); // expected on a fresh machine: fourloop_db doesn't exist yet (created below)
 const { hashPassword, ymd } = require('./utils');
 
@@ -192,6 +192,6 @@ const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); retur
   await c.query('INSERT INTO notifications (user_id,message,is_read) VALUES (?,?,0)', [alex, 'Amara Nwosu applied to join UIPC.']);
 
   await c.end();
-  cfg.destroy(); // release the connection config.js opened, so this script can exit
+  cfg.destroy(); // release the connection conn.js opened, so this script can exit
   console.log('\nDatabase "%s" is ready.\n  Student:  maya@north.edu / password\n  Admin:    admin@codecraft.edu / password (UIPC)\n', cfg.config.database);
 })().catch((e) => { console.error('Setup failed:', e.message); process.exit(1); });

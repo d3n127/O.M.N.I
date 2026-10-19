@@ -1,5 +1,5 @@
 const express = require('express');
-const db = require('../config').promise();
+const db = require('../conn').promise();
 const { hashPassword, verifyPassword, initials } = require('../utils');
 const { wrap, hasOrg } = require('../middleware');
 

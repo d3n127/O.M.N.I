@@ -1,7 +1,7 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
-const db = require('./config').promise();
+const db = require('./conn').promise();
 db.config.dateStrings = true; // DATE columns come back as "YYYY-MM-DD" (views call .slice())
 db.on('error', (err) => console.error('MySQL error (is MySQL running? run "npm run setup" if fourloop_db is missing):', err.message));
 const { viewHelpers } = require('./utils');

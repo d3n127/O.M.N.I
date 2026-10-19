@@ -5,7 +5,7 @@ File > Open Folder > choose the `fourloop` folder.
 
 ## Run (3 steps, in the VS Code terminal)
 1. `npm install`
-2. Open `config.js` and set your MySQL password (XAMPP default = empty). Start MySQL.
+2. Open `conn.js` and set your MySQL password (XAMPP default = empty). Start MySQL.
 3. `npm run setup`   (creates the database + demo data; it resets the data every time)
 4. `npm start`  ->  open http://localhost:3000
 

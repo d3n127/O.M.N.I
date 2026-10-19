@@ -1,4 +1,4 @@
-const db = require('./config').promise();
+const db = require('./conn').promise();
 
 // Lets async route handlers throw errors safely into Express.
 const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);

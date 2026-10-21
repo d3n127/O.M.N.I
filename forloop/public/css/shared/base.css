@@ -89,6 +89,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .pf-card h2 { font-size: 22px; margin-bottom: 4px; }
 .si-wrap { max-width: 560px; }
 .pf-card .btn { margin-top: 24px; }
+.pf-edit { margin-left: auto; align-self: flex-start; }
+.pf-detail h2 { margin-bottom: 10px; }
+.pf-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 18px; padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+.pf-row:last-child { border-bottom: 0; padding-bottom: 0; }
+.pf-row strong { font-weight: 600; text-align: right; }
+.pf-row .pf-bio { font-weight: 500; color: var(--muted); max-width: 62%; }
+.pf-row .pf-chips { margin-top: 0; justify-content: flex-end; }
 .pf-theme { margin-top: 20px; }
 .theme-switch { display: inline-flex; gap: 6px; margin-top: 14px; padding: 5px; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; }
 .theme-set { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 18px; border-radius: 10px; font-weight: 700; font-size: 13.5px; color: var(--muted); }

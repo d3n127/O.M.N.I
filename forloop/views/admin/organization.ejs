@@ -19,6 +19,13 @@
     <select id="o_cat" name="category">
       <% categories.forEach(function (c) { %><option <%= c === org.category ? 'selected' : '' %>><%= c %></option><% }) %>
     </select>
+    <label for="o_elig">Who can join</label>
+    <select id="o_elig" name="eligibility">
+      <option value="International" <%= org.eligibility === 'International' ? 'selected' : '' %>>International — any department can join</option>
+      <% departments.forEach(function (d) { %>
+        <option value="<%= d %>" <%= org.eligibility === d ? 'selected' : '' %>><%= d %> (<%= deptAbbr(d) %>) only</option>
+      <% }) %>
+    </select>
     <label for="o_tags">Tags <small>(comma separated)</small></label>
     <input id="o_tags" name="tags" value="<%= org.tags %>" placeholder="All code, Community">
     <label for="o_logo">Logo text <small>(2–3 characters)</small></label>

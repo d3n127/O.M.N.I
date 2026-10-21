@@ -33,6 +33,18 @@ const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0
 
 const initials = (name) => String(name || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 
+/* ---------- departments: full name + abbreviation (shared by profile, settings, admin) ---------- */
+const DEPARTMENTS = [
+  { name: 'College of Information Technology', abbr: 'CITE' },
+  { name: 'College of Engineering', abbr: 'COE' },
+  { name: 'College of Business & Accountancy', abbr: 'CBA' },
+  { name: 'College of Nursing & Health Sciences', abbr: 'CNHS' },
+  { name: 'College of Arts & Sciences', abbr: 'CAS' },
+  { name: 'College of Education', abbr: 'COED' }
+];
+const DEPT_NAMES = DEPARTMENTS.map((d) => d.name);
+const deptAbbr = (name) => { const d = DEPARTMENTS.find((x) => x.name === name); return d ? d.abbr : String(name || ''); };
+
 /* ---------- inline SVG icons ---------- */
 const ICONS = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
@@ -56,11 +68,12 @@ const ICONS = {
   dots: '<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>',
   pin: '<path d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.7 3.8 5.7 3.8 9S14.5 18.3 12 21c-2.5-2.7-3.8-5.7-3.8-9S9.5 5.7 12 3z"/>',
   moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'
 };
 const icon = (name, size = 20, cls = '') =>
   `<svg class="ic ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
 
-const viewHelpers = { icon, initials, fmtShort, fmtDay, fmtMon, fmtLong, fmtMonthYear, fmtTime };
+const viewHelpers = { icon, initials, fmtShort, fmtDay, fmtMon, fmtLong, fmtMonthYear, fmtTime, deptAbbr };
 
-module.exports = { hashPassword, verifyPassword, ymd, MON, ...viewHelpers, viewHelpers };
+module.exports = { hashPassword, verifyPassword, ymd, MON, DEPARTMENTS, DEPT_NAMES, ...viewHelpers, viewHelpers };

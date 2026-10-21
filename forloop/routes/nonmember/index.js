@@ -17,8 +17,8 @@ async function getOrgs(uid, q) {
   let where = '';
   if (q) {
     const l = `%${q}%`;
-    where = 'WHERE o.name LIKE ? OR o.description LIKE ? OR o.tags LIKE ? OR o.category LIKE ?';
-    params.push(l, l, l, l);
+    where = 'WHERE o.name LIKE ? OR o.description LIKE ? OR o.tags LIKE ? OR o.category LIKE ? OR o.eligibility LIKE ?';
+    params.push(l, l, l, l, l);
   }
   const [rows] = await db.query(`
     SELECT o.*,

@@ -1,6 +1,6 @@
 const express = require('express');
 const db = require('../../conn').promise();
-const { MON } = require('../../utils');
+const { MON, DEPT_NAMES } = require('../../utils');
 const { wrap, requireRole, flash } = require('../../middleware');
 
 const router = express.Router();
@@ -80,18 +80,21 @@ router.get('/', wrap(async (req, res) => {
 /* ---------- Organization profile ---------- */
 router.get('/organization', wrap(async (req, res) => {
   const [[c]] = await db.query('SELECT COUNT(*) AS c FROM memberships WHERE org_id = ?', [res.locals.org.id]);
-  res.render('admin/organization', { title: 'Organization', active: 'organization', memberCount: c.c, categories: CATEGORIES });
+  res.render('admin/organization', { title: 'Organization', active: 'organization', memberCount: c.c, categories: CATEGORIES, departments: DEPT_NAMES });
 }));
 
 router.post('/organization', wrap(async (req, res) => {
   const name = String(req.body.name || '').trim();
   if (!name) { flash(req, 'Organization name cannot be empty.', 'err'); return res.redirect('/admin/organization'); }
   const category = CATEGORIES.includes(req.body.category) ? req.body.category : 'Technology';
+  /* who can join: "International" (any department) or one specific department */
+  const eligibility = req.body.eligibility === 'International' || DEPT_NAMES.includes(req.body.eligibility)
+    ? req.body.eligibility : 'International';
   const logo = String(req.body.logo_text || '').trim().slice(0, 4) || name.slice(0, 2).toUpperCase();
   await db.query(
-    'UPDATE organizations SET name = ?, description = ?, category = ?, tags = ?, logo_text = ?, meeting_schedule = ? WHERE id = ?',
+    'UPDATE organizations SET name = ?, description = ?, category = ?, tags = ?, eligibility = ?, logo_text = ?, meeting_schedule = ? WHERE id = ?',
     [name, String(req.body.description || '').trim(), category, String(req.body.tags || '').trim().slice(0, 160),
-      logo, String(req.body.meeting_schedule || '').trim() || 'To be announced', res.locals.org.id]);
+      eligibility, logo, String(req.body.meeting_schedule || '').trim() || 'To be announced', res.locals.org.id]);
   flash(req, 'Changes saved. Students can see your updated profile now.');
   res.redirect('/admin/organization');
 }));

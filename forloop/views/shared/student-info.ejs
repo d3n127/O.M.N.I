@@ -32,11 +32,13 @@
         <option value="<%= scv %>" selected><%= scv %></option>
       <% } %>
       <% departments.forEach(function (d) { %>
-        <option value="<%= d %>" <%= scv === d ? 'selected' : '' %>><%= d %></option>
+        <option value="<%= d %>" <%= scv === d ? 'selected' : '' %>><%= d %> (<%= deptAbbr(d) %>)</option>
       <% }) %>
     </select>
     <label for="s_bio">Short bio <small>(up to 300 characters)</small></label>
     <textarea id="s_bio" name="bio" rows="3" maxlength="300" required placeholder="A sentence or two about yourself"><%= values.bio || '' %></textarea>
+    <label for="s_hobbies">Hobbies <small>(optional, comma separated — e.g. Chess, Basketball, Painting)</small></label>
+    <input id="s_hobbies" name="hobbies" maxlength="300" placeholder="Chess, Basketball, Painting" value="<%= values.hobbies || '' %>">
     <button class="btn" type="submit">Save and continue <%- icon('arrow', 18) %></button>
   </form>
 </div>

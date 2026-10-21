@@ -1,8 +1,8 @@
 <% var shell = locals.portal || 'student'; %>
 <%- include('../' + shell + '/partials/top') %>
 <p class="eyebrow">Account</p>
-<h1 class="page-title">Profile &amp; settings</h1>
-<p class="lead">Manage your personal details, security and appearance.</p>
+<h1 class="page-title">Profile</h1>
+<p class="lead">Your campus identity — how other students see you.</p>
 
 <div class="pf-hero card">
   <span class="avatar big"><%= initials(u.full_name) %></span>
@@ -14,6 +14,7 @@
         <span class="pf-chip">Organization officer<%= orgName ? ' · ' + orgName : '' %></span>
       <% } else { %>
         <span class="pf-chip">Student · ID <%= u.student_id || '—' %> · <%= u.program %> · Year <%= u.year_level %></span>
+        <span class="pf-chip"><%= deptAbbr(u.college) %></span>
       <% } %>
       <% (orgs || []).forEach(function (o) { %>
         <span class="pf-chip"><%= o.name %> · <%= o.role_title %></span>
@@ -21,68 +22,42 @@
       <span class="pf-chip">Member since <%= fmtMonthYear(u.created_at) %></span>
     </div>
   </div>
+  <a class="btn pf-edit" href="/settings">Edit profile <%- icon('arrow', 18) %></a>
 </div>
 
-<div class="pf-grid">
-  <form class="card pf-card" method="post" action="/profile">
-    <h2>Edit profile</h2>
-    <label for="p_name">Full name</label>
-    <input id="p_name" name="full_name" value="<%= u.full_name %>" required>
-    <label for="p_email">University email</label>
-    <input id="p_email" type="email" name="email" value="<%= u.email %>" required>
-    <% if (u.role === 'student') { %>
-      <label for="p_sid">Student ID</label>
-      <input id="p_sid" name="student_id" value="<%= u.student_id || '' %>" placeholder="e.g. 2024-12345" required maxlength="24">
-      <label for="p_program">Program (course)</label>
-      <select id="p_program" name="program" required>
-        <% var ppv = u.program || ''; if (ppv && programs.indexOf(ppv) === -1) { %>
-          <option value="<%= ppv %>" selected><%= ppv %></option>
-        <% } %>
-        <% programs.forEach(function (p) { %>
-          <option value="<%= p %>" <%= ppv === p ? 'selected' : '' %>><%= p %></option>
-        <% }) %>
-      </select>
-      <label for="p_year">Year level</label>
-      <select id="p_year" name="year_level">
-        <% [1, 2, 3, 4].forEach(function (y) { %>
-          <option value="<%= y %>" <%= Number(u.year_level) === y ? 'selected' : '' %>>Year <%= y %></option>
-        <% }) %>
-      </select>
-      <label for="p_contact">Contact number</label>
-      <input id="p_contact" name="contact" type="tel" value="<%= u.contact || '' %>" required maxlength="30">
-      <label for="p_college">Department (college / faculty)</label>
-      <select id="p_college" name="college" required>
-        <% var pcv = u.college || ''; if (pcv && departments.indexOf(pcv) === -1) { %>
-          <option value="<%= pcv %>" selected><%= pcv %></option>
-        <% } %>
-        <% departments.forEach(function (d) { %>
-          <option value="<%= d %>" <%= pcv === d ? 'selected' : '' %>><%= d %></option>
-        <% }) %>
-      </select>
-      <label for="p_bio">Short bio <small>(up to 300 characters)</small></label>
-      <textarea id="p_bio" name="bio" rows="3" maxlength="300"><%= u.bio || '' %></textarea>
-    <% } %>
-    <button class="btn" type="submit">Save changes <%- icon('arrow', 18) %></button>
-  </form>
-
-  <form class="card pf-card" method="post" action="/profile/password">
-    <h2>Change password</h2>
-    <label for="p_cur">Current password</label>
-    <input id="p_cur" type="password" name="current_password" required autocomplete="current-password">
-    <label for="p_new">New password <small>(at least 6 characters)</small></label>
-    <input id="p_new" type="password" name="new_password" minlength="6" required autocomplete="new-password">
-    <label for="p_confirm">Confirm new password</label>
-    <input id="p_confirm" type="password" name="confirm_password" minlength="6" required autocomplete="new-password">
-    <button class="btn" type="submit">Update password <%- icon('arrow', 18) %></button>
-  </form>
-</div>
-
-<div class="card pf-card pf-theme">
-  <h2>Appearance</h2>
-  <p class="muted">Choose how O.M.N.I looks on this device.</p>
-  <div class="theme-switch">
-    <button type="button" class="theme-set" data-theme-set="light"><%- icon('sun', 16) %> Light</button>
-    <button type="button" class="theme-set" data-theme-set="dark"><%- icon('moon', 16) %> Dark</button>
+<% if (u.role === 'student') { %>
+  <div class="card pf-card pf-detail">
+    <h2>Student information</h2>
+    <div class="pf-row"><span class="muted">Student ID</span><strong><%= u.student_id || '—' %></strong></div>
+    <div class="pf-row"><span class="muted">Program</span><strong><%= u.program %></strong></div>
+    <div class="pf-row"><span class="muted">Year level</span><strong>Year <%= u.year_level %></strong></div>
+    <div class="pf-row"><span class="muted">Department</span><strong><%= u.college %> (<%= deptAbbr(u.college) %>)</strong></div>
+    <div class="pf-row"><span class="muted">Contact</span><strong><%= u.contact || '—' %></strong></div>
+    <div class="pf-row"><span class="muted">Bio</span><strong class="pf-bio"><%= u.bio || '—' %></strong></div>
+    <div class="pf-row">
+      <span class="muted">Hobbies</span>
+      <span class="pf-chips">
+        <% var hobbies = String(u.hobbies || '').split(',').map(function (h) { return h.trim(); }).filter(Boolean); %>
+        <% if (hobbies.length) { hobbies.forEach(function (h) { %><span class="pf-chip"><%= h %></span><% }) %>
+        <% } else { %><strong>—</strong><% } %>
+      </span>
+    </div>
   </div>
-</div>
+
+  <% if (orgs.length) { %>
+    <div class="card pf-card pf-detail">
+      <h2>My organizations</h2>
+      <% orgs.forEach(function (o) { %>
+        <div class="pf-row"><span class="muted"><%= o.name %></span><strong><%= o.role_title %> · joined <%= fmtMonthYear(o.joined_at) %></strong></div>
+      <% }) %>
+    </div>
+  <% } %>
+<% } else { %>
+  <div class="card pf-card pf-detail">
+    <h2>Organization</h2>
+    <div class="pf-row"><span class="muted">Organization</span><strong><%= orgName || '—' %></strong></div>
+    <div class="pf-row"><span class="muted">Role</span><strong>Organization officer</strong></div>
+    <div class="pf-row"><span class="muted">Member since</span><strong><%= fmtMonthYear(u.created_at) %></strong></div>
+  </div>
+<% } %>
 <%- include('../' + shell + '/partials/bottom') %>

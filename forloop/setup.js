@@ -12,6 +12,7 @@ CREATE TABLE organizations (
   description TEXT,
   category VARCHAR(40) NOT NULL DEFAULT 'Technology',
   tags VARCHAR(160) NOT NULL DEFAULT '',
+  eligibility VARCHAR(100) NOT NULL DEFAULT 'International',
   color ENUM('yellow','teal','lime','lilac') NOT NULL DEFAULT 'teal',
   logo_text VARCHAR(4) NOT NULL DEFAULT 'OR',
   logo_style ENUM('tile','navy','cream','dark') NOT NULL DEFAULT 'dark',
@@ -31,6 +32,7 @@ CREATE TABLE users (
   contact VARCHAR(30) NULL,
   college VARCHAR(100) NULL,
   bio VARCHAR(300) NULL,
+  hobbies VARCHAR(300) NULL,
   profile_complete TINYINT(1) NOT NULL DEFAULT 0,
   org_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -117,6 +119,9 @@ const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); retur
     O[o[0]] = await ins('INSERT INTO organizations (name,description,category,tags,color,logo_text,logo_style,meeting_schedule) VALUES (?,?,?,?,?,?,?,?)', o);
   }
   await c.query('UPDATE organizations SET satisfaction = 4.8 WHERE id = ?', [O.UIPC]);
+  /* who can join: International = any department; the rest are tied to one department */
+  await c.query('UPDATE organizations SET eligibility = ? WHERE id = ?', ['College of Engineering', O['F1 Stackmind']]);
+  await c.query('UPDATE organizations SET eligibility = ? WHERE id = ?', ['College of Arts & Sciences', O.CITEMAS]);
 
   /* users */
   const user = (name, email, program, year, role = 'student', org = null) =>
@@ -171,6 +176,7 @@ const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); retur
   }
 
   /* Maya: member of Xcite + CITEMAS, pending at F1 Stackmind */
+  await c.query('UPDATE users SET hobbies = ? WHERE id = ?', ['Dancing, Animation, Chess', maya]);
   await c.query('INSERT INTO memberships (org_id,user_id,role_title,joined_at) VALUES (?,?,?,?)', [O.Xcite, maya, 'Member', addDays(-14)]);
   await c.query('INSERT INTO memberships (org_id,user_id,role_title,joined_at) VALUES (?,?,?,?)', [O.CITEMAS, maya, 'Member', addDays(-3)]);
   await c.query('INSERT INTO applications (org_id,user_id,intro,status,created_at,reviewed_at) VALUES (?,?,?,?,?,?)',

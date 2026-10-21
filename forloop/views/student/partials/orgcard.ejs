@@ -1,11 +1,14 @@
-<article class="org" data-category="<%= o.category %>">
+<article class="org" data-category="<%= o.category %>" data-eligibility="<%= o.eligibility || 'International' %>">
   <div class="org-top c-<%= o.color %>">
     <button class="save <%= o.saved ? 'on' : '' %>" data-save="<%= o.id %>" aria-label="Save <%= o.name %>"><%- icon('bookmark', 18) %></button>
     <span class="logo-badge lb-<%= o.logo_style %>"><%= o.logo_text %></span>
     <span class="pill"><%- icon('userplus', 14) %><%= o.member_count %> member<%= o.member_count == 1 ? '' : 's' %></span>
   </div>
   <div class="org-body">
-    <div class="tags"><% String(o.tags).split(',').forEach(function (t) { if (t.trim()) { %><span><%= t.trim() %></span><% } }) %></div>
+    <div class="tags">
+      <span class="elig"><%- icon('globe', 12) %><%= o.eligibility === 'International' || !o.eligibility ? 'International' : deptAbbr(o.eligibility) + ' only' %></span>
+      <% String(o.tags).split(',').forEach(function (t) { if (t.trim()) { %><span><%= t.trim() %></span><% } }) %>
+    </div>
     <h3><%= o.name %></h3>
     <p><%= o.description %></p>
     <button class="org-cta" data-apply

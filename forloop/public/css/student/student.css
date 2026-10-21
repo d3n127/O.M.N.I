@@ -51,6 +51,8 @@
 .org-body { padding: 18px 20px 6px; display: flex; flex-direction: column; flex: 1; }
 .tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
 .tags span { background: #e6eee9; border-radius: 8px; padding: 5px 9px; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #3f5a55; }
+.tags span.elig { background: var(--yellow); color: var(--on-tile); display: inline-flex; align-items: center; gap: 5px; }
+[data-theme="dark"] .tags span.elig { background: var(--yellow); color: var(--on-tile); }
 .org h3 { font-size: 21px; margin-bottom: 6px; }
 .org p { color: var(--muted); font-size: 13.5px; flex: 1; }
 .org-cta { margin-top: 16px; padding: 16px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-size: 13px; width: 100%; text-align: left; }

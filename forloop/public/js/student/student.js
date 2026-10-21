@@ -2,12 +2,25 @@
 (function () {
   var $ = FL.$, $$ = FL.$$;
 
-  /* category filter chips */
+  /* combined filter chips (category + who-can-join eligibility) */
+  var KEY = { cat: 'category', elig: 'eligibility' };
+  function applyFilters() {
+    var sel = [];
+    $$('[data-filter]').forEach(function (g) {
+      var b = g.querySelector('button.on'); if (!b) return;
+      var k = Object.keys(b.dataset)[0];
+      if (b.dataset[k] !== 'all') sel.push([KEY[k] || k, b.dataset[k]]);
+    });
+    $$('.org').forEach(function (o) {
+      var hide = sel.some(function (s) { return o.dataset[s[0]] !== s[1]; });
+      o.classList.toggle('hide', hide);
+    });
+  }
   $$('[data-filter]').forEach(function (group) {
     group.addEventListener('click', function (e) {
       var b = e.target.closest('button'); if (!b) return;
       $$('button', group).forEach(function (x) { x.classList.toggle('on', x === b); });
-      $$('.org').forEach(function (o) { o.classList.toggle('hide', b.dataset.cat !== 'all' && o.dataset.category !== b.dataset.cat); });
+      applyFilters();
     });
   });
 

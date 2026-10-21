@@ -9,7 +9,7 @@
       <% }) %>
     </nav>
     <div class="side-bottom">
-      <a href="/profile" class="<%= locals.active === 'settings' ? 'on' : '' %>"><%- icon('settings', 22) %><span>Settings</span></a>
+      <a href="/settings" class="<%= locals.active === 'settings' ? 'on' : '' %>"><%- icon('settings', 22) %><span>Settings</span></a>
       <a href="/logout"><%- icon('logout', 22) %><span>Log out</span></a>
       <div class="me">
         <span class="avatar"><%= initials(me.name) %><i class="online"></i></span>

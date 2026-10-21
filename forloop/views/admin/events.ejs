@@ -1,0 +1,53 @@
+<%- include('partials/top') %>
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Programming</p>
+    <h1 class="page-title">Events &amp; activities</h1>
+    <p class="lead">Plan moments your members will remember.</p>
+  </div>
+  <button class="btn" data-event-new><%- icon('plus', 18) %> Create event</button>
+</div>
+
+<% if (!events.length) { %><div class="card empty-card"><h3>No events yet.</h3><p>Create your first event. Save it as a draft or publish it so members can join.</p></div><% } %>
+<% var tiles = ['yellow','teal','lime','lilac']; events.forEach(function (e, i) { %>
+  <div class="ev-admin">
+    <span class="date-tile <%= tiles[i % 4] %>"><small><%= fmtMon(e.event_date) %></small><b><%= fmtDay(e.event_date) %></b></span>
+    <div class="grow">
+      <p class="eyebrow"><%= e.status === 'published' ? 'Published' : 'Draft' %></p>
+      <h3><%= e.title %></h3>
+      <small><%= fmtTime(e.event_time) %> · <%= e.location %></small>
+    </div>
+    <div class="rsvp"><strong><%= e.status === 'published' ? e.rsvps : '–' %></strong><small>RSVPs</small></div>
+    <button class="btn outline small" data-event-edit
+      data-id="<%= e.id %>" data-title="<%= e.title %>" data-date="<%= e.event_date.slice(0, 10) %>"
+      data-time="<%= e.event_time.slice(0, 5) %>" data-location="<%= e.location %>"
+      data-desc="<%= e.description || '' %>" data-status="<%= e.status %>">Manage <%- icon('arrow', 16) %></button>
+  </div>
+<% }) %>
+
+<div class="modal" id="eventModal" hidden>
+  <div class="modal-box slim" role="dialog" aria-modal="true">
+    <button class="close" data-close aria-label="Close"><%- icon('x', 18) %></button>
+    <p class="eyebrow" id="evEyebrow">New event</p>
+    <h2 id="evHeading">Create event</h2>
+    <form method="post" action="/admin/events" id="eventForm" class="form">
+      <label for="ev_title">Event title</label>
+      <input id="ev_title" name="title" required placeholder="e.g. Hackathon">
+      <div class="row2">
+        <div><label for="ev_date">Date</label><input id="ev_date" type="date" name="event_date" required></div>
+        <div><label for="ev_time">Time</label><input id="ev_time" type="time" name="event_time" required value="09:00"></div>
+      </div>
+      <label for="ev_loc">Location</label>
+      <input id="ev_loc" name="location" placeholder="e.g. Innovation Lab">
+      <label for="ev_desc">Description</label>
+      <textarea id="ev_desc" name="description" rows="3" placeholder="What should members expect?"></textarea>
+      <label for="ev_status">Status</label>
+      <select id="ev_status" name="status"><option value="published">Published — members can see and join</option><option value="draft">Draft — only you can see it</option></select>
+      <button class="btn block" type="submit">Save event <%- icon('arrow', 18) %></button>
+    </form>
+    <form method="post" id="eventDelete" hidden data-confirm="Delete this event? RSVPs will be removed too.">
+      <button class="link-danger" type="submit">Delete event</button>
+    </form>
+  </div>
+</div>
+<%- include('partials/bottom') %>

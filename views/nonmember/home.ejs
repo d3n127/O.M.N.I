@@ -1,0 +1,49 @@
+<%- include('partials/top') %>
+
+<section class="hero">
+  <i class="h-sun"></i><i class="h-arc"></i><i class="h-line l1"></i><i class="h-line l2"></i>
+  <span class="spark s1">✦</span><span class="spark s2">✦</span>
+  <p class="eyebrow">Welcome to 4loopGroup</p>
+  <h1>Your campus.<br>Your community.</h1>
+  <p>Browse organizations, apply to join, and RSVP to events. Once a team accepts you, your full student dashboard unlocks.</p>
+</section>
+
+<section class="stats">
+  <a class="stat" href="/nonmember/discover"><span class="s-ic yellow"><%- icon('compass', 22) %></span><div><strong><%= stats.explore %></strong><small>Organizations to explore</small></div><em>View <%- icon('arrow', 16) %></em></a>
+  <a class="stat" href="/nonmember/events"><span class="s-ic teal"><%- icon('calendar', 22) %></span><div><strong><%= stats.upcoming %></strong><small>Upcoming events</small></div><em>View <%- icon('arrow', 16) %></em></a>
+</section>
+
+<section class="section-block">
+  <div class="block-head">
+    <div><p class="eyebrow">Find your community</p><h2>Organizations to explore</h2></div>
+    <a class="more" href="/nonmember/discover">Browse all <%- icon('arrow', 18) %></a>
+  </div>
+  <div class="chips" data-filter>
+    <button class="on" data-cat="all">All</button>
+    <% cats.forEach(function (c) { %><button data-cat="<%= c %>"><%= c %></button><% }) %>
+  </div>
+  <% if (!orgs.length) { %>
+    <div class="card empty-card"><h3>No organizations yet.</h3><p>Check back soon — new communities are joining all the time.</p></div>
+  <% } %>
+  <div class="org-grid">
+    <% orgs.forEach(function (o) { %><%- include('../student/partials/orgcard', { o: o }) %><% }) %>
+  </div>
+</section>
+
+<section class="section-block">
+  <div class="card">
+    <p class="eyebrow">Save the date</p>
+    <div class="block-head tight"><h2>Coming up</h2><a class="underline" href="/nonmember/events">View calendar</a></div>
+    <% if (!events.length) { %><p class="empty">No events yet. Check back soon.</p><% } %>
+    <% var tiles = ['yellow','teal','lime']; events.forEach(function (e, i) { %>
+      <a class="ev-row" href="/nonmember/events">
+        <span class="date-tile <%= tiles[i % 3] %>"><small><%= fmtMon(e.event_date) %></small><b><%= fmtDay(e.event_date) %></b></span>
+        <div><strong><%= e.title %></strong><small><%= e.org_name %> <span class="sep"></span><%- icon('clock', 14) %> <%= fmtTime(e.event_time) %></small></div>
+        <span class="round"><%- icon('arrow', 18) %></span>
+      </a>
+    <% }) %>
+  </div>
+</section>
+
+<%- include('../student/partials/apply_modal', { applyEndpoint: '/nonmember/apply' }) %>
+<%- include('partials/bottom') %>

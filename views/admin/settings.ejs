@@ -1,0 +1,18 @@
+<%- include('partials/top') %>
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Account</p>
+    <h1 class="page-title">Settings</h1>
+    <p class="lead">Update your name and password.</p>
+  </div>
+</div>
+<form class="card form narrow" method="post" action="/admin/settings">
+  <label for="s_name">Full name</label>
+  <input id="s_name" name="full_name" value="<%= me.name %>" required>
+  <label for="s_cur">Current password <small>(only if changing it)</small></label>
+  <input id="s_cur" type="password" name="current_password" autocomplete="current-password">
+  <label for="s_new">New password</label>
+  <input id="s_new" type="password" name="new_password" minlength="6" autocomplete="new-password">
+  <button class="btn" type="submit">Save changes</button>
+</form>
+<%- include('partials/bottom') %>

@@ -1,0 +1,37 @@
+<%- include('partials/top') %>
+<p class="eyebrow">Your journey</p>
+<h1 class="page-title">Applications</h1>
+<p class="lead">Track every application and see what happens next.</p>
+
+<% if (!apps.length) { %>
+  <div class="card empty-card"><h3>No applications yet.</h3><p>Browse <a class="underline" href="/student/discover">organizations</a> and apply to the ones that fit you.</p></div>
+<% } %>
+
+<% apps.forEach(function (a) { var o = byId[a.org_id]; %>
+  <div class="app-row">
+    <span class="mini lg c-<%= a.color %>"><%= a.logo_text %></span>
+    <div class="app-name"><strong><%= a.org_name %></strong><small>Submitted <%= fmtShort(a.created_at) %></small></div>
+    <div class="steps">
+      <span class="step on">Applied</span><i></i>
+      <span class="step on">Review</span><i></i>
+      <span class="step <%= a.status !== 'pending' ? 'on' : '' %>">Decision</span>
+    </div>
+    <span class="badge <%= a.status %>"><%= a.status === 'pending' ? 'In review' : a.status === 'approved' ? 'Accepted' : 'Declined' %></span>
+    <% if (a.status === 'rejected' && o) { %>
+      <button class="btn small" data-apply data-id="<%= o.id %>" data-name="<%= o.name %>" data-desc="<%= o.description %>"
+        data-category="<%= o.category %>" data-schedule="<%= o.meeting_schedule %>" data-members="<%= o.member_count %>" data-status="rejected">Revise &amp; apply</button>
+    <% } else if (a.status === 'approved') { %>
+      <a class="round" href="/student/events?org=<%= a.org_id %>" aria-label="View activities"><%- icon('arrow', 18) %></a>
+    <% } else { %>
+      <a class="round" href="/student/discover?q=<%= encodeURIComponent(a.org_name) %>" aria-label="View organization"><%- icon('arrow', 18) %></a>
+    <% } %>
+  </div>
+<% }) %>
+
+<div class="info-box">
+  <%- icon('spark', 22) %>
+  <div><strong>What happens after I apply?</strong><p>The organization reviews your profile. You’ll receive a notification when they approve, reject, or request changes. If you’re declined, you can revise your introduction and apply again.</p></div>
+</div>
+
+<%- include('partials/apply_modal') %>
+<%- include('partials/bottom') %>

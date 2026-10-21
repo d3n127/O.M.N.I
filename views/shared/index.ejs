@@ -1,0 +1,23 @@
+<%- include('head', { title: 'Welcome', bodyClass: 'auth t-student' }) %>
+<div class="sun-wrap" aria-hidden="true"><i class="orbit o2"></i><i class="orbit o1"></i><i class="halo"></i><i class="sun"></i></div>
+<section class="auth-card roles">
+  <%- include('logo') %>
+  <p class="eyebrow">Select your role</p>
+  <h1>Your campus.<br>Your community.</h1>
+  <p class="sub">Choose how you want to use 4loopGroup.</p>
+  <div class="role-grid">
+    <a class="role r-yellow" href="/login/student">
+      <span class="role-ic"><%- icon('userplus', 26) %></span>
+      <strong>I’m a student</strong>
+      <small>Find organizations, apply, and join events.</small>
+      <span class="go"><%- icon('arrow', 20) %></span>
+    </a>
+    <a class="role r-navy" href="/login/admin">
+      <span class="role-ic"><%- icon('building', 26) %></span>
+      <strong>I run an organization</strong>
+      <small>Manage members, applications, events and reports.</small>
+      <span class="go"><%- icon('arrow', 20) %></span>
+    </a>
+  </div>
+</section>
+<%- include('foot') %>

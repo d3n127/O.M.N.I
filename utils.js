@@ -54,6 +54,7 @@ const ICONS = {
   plus: '<path d="M12 5v14M5 12h14"/>',
   spark: '<path d="M12 3l2 6 6 2-6 2-2 6-2-6-6-2 6-2z"/>',
   dots: '<circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/>',
+  menu: '<path d="M4 7h16M4 12h16M4 17h16"/>',
   pin: '<path d="M12 21s7-6 7-11a7 7 0 0 0-14 0c0 5 7 11 7 11z"/><circle cx="12" cy="10" r="2.5"/>'
 };
 const icon = (name, size = 20, cls = '') =>

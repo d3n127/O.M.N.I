@@ -9,8 +9,10 @@
 
 <% apps.forEach(function (a) { var o = byId[a.org_id]; %>
   <div class="app-row">
-    <span class="mini lg c-<%= a.color %>"><%= a.logo_text %></span>
-    <div class="app-name"><strong><%= a.org_name %></strong><small>Submitted <%= fmtShort(a.created_at) %></small></div>
+    <div class="app-who">
+      <span class="mini lg c-<%= a.color %>"><%= a.logo_text %></span>
+      <div class="app-name"><strong><%= a.org_name %></strong><small>Submitted <%= fmtShort(a.created_at) %></small></div>
+    </div>
     <div class="steps">
       <span class="step on">Applied</span><i></i>
       <span class="step on">Review</span><i></i>

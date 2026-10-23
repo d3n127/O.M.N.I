@@ -69,4 +69,26 @@
   /* flash toast */
   var toast = $('#toast');
   if (toast) setTimeout(function () { toast.remove(); }, 4200);
+
+  /* mobile nav drawer (admin sidebar) */
+  var burger = $('[data-nav-toggle]');
+  if (burger && $('#sideNav')) {
+    var setNav = function (open) {
+      document.body.classList.toggle('nav-open', open);
+      burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+    };
+    burger.addEventListener('click', function () { setNav(!document.body.classList.contains('nav-open')); });
+    $$('[data-nav-close]').forEach(function (el) { el.addEventListener('click', function () { setNav(false); }); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') setNav(false); });
+    window.addEventListener('resize', function () { if (window.innerWidth > 1100) setNav(false); });
+  }
+
+  /* keep the active tab visible on the scrollable nav strip */
+  var on = $('.topnav a.on');
+  if (on && on.parentElement) {
+    var strip = on.parentElement;
+    if (strip.scrollWidth > strip.clientWidth) {
+      strip.scrollLeft = on.offsetLeft - (strip.clientWidth - on.offsetWidth) / 2;
+    }
+  }
 })();

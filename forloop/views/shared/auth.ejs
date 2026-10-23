@@ -20,9 +20,9 @@
     <label for="l_email">University email</label>
     <input id="l_email" type="email" name="email" placeholder="you@university.edu" required value="<%= values.email || '' %>" autocomplete="email">
     <label for="l_pw">Password</label>
-    <input id="l_pw" type="password" name="password" placeholder="Your password" required value="<%= values.email ? '' : '' %>" autocomplete="">
+    <input id="l_pw" type="password" name="password" placeholder="Your password" required autocomplete="current-password">
     <button class="btn block" type="submit">Sign in <%- icon('arrow', 18) %></button>
-    <p class="hint">Demo ready — use the prefilled details to explore.</p>
+    <p class="hint">Demo account — <%= demo %></p>
   </form>
 
   <form method="post" action="/auth/register" id="registerForm" <%= mode === 'login' ? 'hidden' : '' %>>

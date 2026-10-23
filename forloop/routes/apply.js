@@ -3,7 +3,12 @@ const db = require('../conn').promise();
 /* Shared application body of FR-STUDENT-3 and FR-NONMEMBER-3 — one implementation so both
    portals validate and write identically (divergence is a defect, spec-nonmember §5). */
 async function applyToOrg(req, res) {
-  const uid = req.session.user.id;
+  /* RBAC asserted here as well as in the router: applying is a student-only action,
+     so the helper stays safe even if it is ever mounted outside requireRole('student'). */
+  const u = req.session.user;
+  if (!u) return res.status(401).json({ error: 'Sign in to continue.' });
+  if (u.role !== 'student') return res.status(403).json({ error: 'Only student accounts can apply to an organization.' });
+  const uid = u.id;
   const orgId = Number(req.body.org_id);
   const intro = String(req.body.intro || '').trim();
   if (!intro) return res.status(400).json({ error: 'Write a short introduction so the team can get to know you.' });

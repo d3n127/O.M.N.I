@@ -5,7 +5,7 @@ const db = require('./conn').promise();
 db.config.dateStrings = true; // DATE columns come back as "YYYY-MM-DD" (views call .slice())
 db.on('error', (err) => console.error('MySQL error (is MySQL running? run "npm run setup" if fourloop_db is missing):', err.message));
 const { viewHelpers } = require('./utils');
-const { wrap } = require('./middleware');
+const { wrap, loadUser } = require('./middleware');
 
 const app = express();
 
@@ -23,6 +23,9 @@ app.use(session({
   saveUninitialized: false,
   cookie: { maxAge: 1000 * 60 * 60 * 8 }
 }));
+
+// re-read the signed-in user (and their role) from the DB before anything else runs
+app.use(loadUser);
 
 // values every page can use: current user, flash message, notifications
 app.use(wrap(async (req, res, next) => {
@@ -60,6 +63,25 @@ app.use((err, req, res, next) => {
   res.status(500).send('Something went wrong. Check the server console. <a href="/">Go home</a>');
 });
 
-app.listen(3000, () => {
-  console.log('O.M.N.I running at http://localhost:3000');
+const PORT = process.env.PORT || 3000;
+const server = app.listen(PORT, () => {
+  console.log(`O.M.N.I running at http://localhost:${PORT}`);
+});
+
+/* Two instances on one port is the #1 way this app fails to boot. Say so plainly instead of
+   throwing an unhandled EADDRINUSE stack trace (which also leaves nodemon sitting on a crash
+   until a file changes). */
+server.on('error', (err) => {
+  if (err.code !== 'EADDRINUSE') { console.error(err); return process.exit(1); }
+  console.error([
+    '',
+    `  Port ${PORT} is already in use — another O.M.N.I instance is running.`,
+    '  Find and stop it:',
+    `    netstat -ano | findstr :${PORT}`,
+    '    taskkill /PID <pid> /F',
+    '  …or start this copy somewhere else:',
+    `    PORT=3001 npm start`,
+    ''
+  ].join('\n'));
+  process.exit(1);
 });

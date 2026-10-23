@@ -1,47 +1,51 @@
 const express = require('express');
 const db = require('../conn').promise();
 const { hashPassword, verifyPassword, initials } = require('../utils');
-const { wrap, hasOrg } = require('../middleware');
+const { wrap, homeFor, ROLES } = require('../middleware');
 
 const router = express.Router();
-const ROLES = ['student', 'admin'];
-const DEMO = { student: '', admin: '' };
+const DEMO = { student: 'maya@north.edu / password', admin: 'admin@codecraft.edu / password (UIPC)' };
 const COLORS = ['yellow', 'teal', 'lime', 'lilac'];
 
-// membership-aware landing (FR-NONMEMBER-6): officers -> /admin, students with 0 orgs -> /nonmember
-// students who never submitted the required student information land on /student-info first
-async function home(u) {
-  if (u.role === 'admin') return '/admin';
-  const [[r]] = await db.query('SELECT profile_complete FROM users WHERE id = ?', [u.id]);
-  if (!r || !Number(r.profile_complete)) return '/student-info';
-  return (await hasOrg(u.id)) > 0 ? '/student' : '/nonmember';
-}
+const label = (role) => (role === 'admin' ? 'organization' : 'student');
 
 function renderAuth(res, role, mode, error, values = {}) {
   res.status(error ? 400 : 200).render('shared/auth', { role, mode, error, values, demo: DEMO[role] });
 }
 
 router.get('/', wrap(async (req, res) => {
-  if (req.session.user) return res.redirect(await home(req.session.user));
+  if (req.session.user) return res.redirect(await homeFor(req.session.user));
   res.render('shared/index');
 }));
 
-router.get('/login/:role', (req, res) => {
+router.get('/login/:role', wrap(async (req, res) => {
   const { role } = req.params;
   if (!ROLES.includes(role)) return res.redirect('/');
+  // already signed in (any role) — no login form, go to your own portal
+  if (req.session.user) return res.redirect(await homeFor(req.session.user));
   renderAuth(res, role, req.query.mode === 'register' ? 'register' : 'login', null, {});
-});
+}));
 
 router.post('/auth/login', wrap(async (req, res) => {
   const role = ROLES.includes(req.body.role) ? req.body.role : 'student';
   const email = String(req.body.email || '').trim().toLowerCase();
+  const password = String(req.body.password || '');
+
   const [rows] = await db.query('SELECT * FROM users WHERE email = ? AND role = ?', [email, role]);
-  if (!rows.length || !verifyPassword(String(req.body.password || ''), rows[0].password_hash)) {
+  if (!rows.length) {
+    // RBAC feedback: the email may exist, just not on this portal
+    const [other] = await db.query('SELECT role FROM users WHERE email = ? LIMIT 1', [email]);
+    if (other.length) return renderAuth(res, role, 'login',
+      `That email is registered as a ${label(other[0].role)} account — sign in on the ${label(other[0].role)} portal instead.`, { email });
+    return renderAuth(res, role, 'login',
+      `There is no ${label(role)} account with that email. Create one first.`, { email });
+  }
+  if (!(await verifyPassword(password, rows[0].password_hash))) {
     return renderAuth(res, role, 'login', 'Incorrect email or password. Check them and try again.', { email });
   }
   const u = rows[0];
   req.session.user = { id: u.id, name: u.full_name, role: u.role, org_id: u.org_id };
-  res.redirect(await home(req.session.user));
+  res.redirect(await homeFor(req.session.user));
 }));
 
 router.post('/auth/register', wrap(async (req, res) => {
@@ -69,9 +73,9 @@ router.post('/auth/register', wrap(async (req, res) => {
     orgId = r.insertId;
   }
   const [u] = await db.query('INSERT INTO users (full_name, email, password_hash, role, org_id) VALUES (?,?,?,?,?)',
-    [name, email, hashPassword(password), role, orgId]);
+    [name, email, await hashPassword(password), role, orgId]);
   req.session.user = { id: u.insertId, name, role, org_id: orgId };
-  res.redirect(await home(req.session.user));
+  res.redirect(await homeFor(req.session.user));
 }));
 
 router.get('/logout', (req, res) => {

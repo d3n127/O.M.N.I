@@ -105,7 +105,6 @@ const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); retur
   await c.query(SCHEMA);
 
   const ins = async (sql, p) => (await c.query(sql, p))[0].insertId;
-  const pw = hashPassword('password');
 
   /* organizations */
   const O = {};
@@ -123,9 +122,10 @@ const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); retur
   await c.query('UPDATE organizations SET eligibility = ? WHERE id = ?', ['College of Engineering', O['F1 Stackmind']]);
   await c.query('UPDATE organizations SET eligibility = ? WHERE id = ?', ['College of Arts & Sciences', O.CITEMAS]);
 
-  /* users */
-  const user = (name, email, program, year, role = 'student', org = null) =>
-    ins('INSERT INTO users (full_name,email,password_hash,role,program,year_level,org_id) VALUES (?,?,?,?,?,?,?)', [name, email, pw, role, program, year, org]);
+  /* users — hashed per account so every demo user gets their own salt */
+  const user = async (name, email, program, year, role = 'student', org = null) =>
+    ins('INSERT INTO users (full_name,email,password_hash,role,program,year_level,org_id) VALUES (?,?,?,?,?,?,?)',
+      [name, email, await hashPassword('password'), role, program, year, org]);
 
   const maya = await user('Maya Alvarez', 'maya@north.edu', 'BS Computer Science', 2);
   const alex = await user('Alex Rivera', 'admin@codecraft.edu', 'Faculty Advisor', 1, 'admin', O.UIPC);

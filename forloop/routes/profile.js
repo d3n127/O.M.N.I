@@ -1,18 +1,21 @@
 const express = require('express');
 const db = require('../conn').promise();
-const { wrap, flash, hasOrg, requireStudentInfo } = require('../middleware');
+const { wrap, flash, hasOrg, requireAuth, requireStudentInfo } = require('../middleware');
 const { hashPassword, verifyPassword, DEPT_NAMES } = require('../utils');
 
 const router = express.Router();
 
+/* These four pages are what this router owns. The guards MUST be path-scoped: the router is
+   mounted at "/", so an unscoped router.use() here also runs for /admin, /student and
+   /notifications/read — stealing those requests from requireRole() and sending anonymous
+   visitors to the landing page instead of their portal's login screen. */
+const PAGES = ['/student-info', '/profile', '/settings', '/profile/password'];
+
 /* any logged-in user (student, nonmember or admin) may manage their profile */
-router.use((req, res, next) => {
-  if (!req.session.user) return res.redirect('/');
-  next();
-});
+router.use(PAGES, requireAuth);
 
 /* pick the portal shell the page renders inside (admin sidebar / student topbar / nonmember topbar) */
-router.use(wrap(async (req, res, next) => {
+router.use(PAGES, wrap(async (req, res, next) => {
   const u = req.session.user;
   res.locals.portal = 'nonmember';
   if (u.role === 'admin') {
@@ -81,8 +84,9 @@ router.post('/student-info', wrap(async (req, res) => {
   res.redirect((await hasOrg(uid)) > 0 ? '/student' : '/nonmember');
 }));
 
-/* everything below requires the student information to be complete (officers pass through) */
-router.use(requireStudentInfo);
+/* everything below requires the student information to be complete (officers pass through).
+   /student-info is deliberately excluded — it is the gate itself, so gating it would loop. */
+router.use(['/profile', '/settings', '/profile/password'], requireStudentInfo);
 
 /* shared data loader for the view + settings pages */
 async function loadAccount(uid) {
@@ -172,11 +176,11 @@ router.post('/profile/password', wrap(async (req, res) => {
   if (next !== confirm) { flash(req, 'New password and confirmation do not match.', 'err'); return res.redirect(back); }
 
   const [[u]] = await db.query('SELECT password_hash FROM users WHERE id = ?', [uid]);
-  if (!verifyPassword(cur, u.password_hash)) {
+  if (!(await verifyPassword(cur, u.password_hash))) {
     flash(req, 'Your current password is incorrect.', 'err');
     return res.redirect(back);
   }
-  await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [hashPassword(next), uid]);
+  await db.query('UPDATE users SET password_hash = ? WHERE id = ?', [await hashPassword(next), uid]);
   flash(req, 'Password changed.');
   res.redirect(back);
 }));

@@ -1,17 +1,31 @@
-const crypto = require('crypto');
+const { randomBytes, scrypt, timingSafeEqual } = require('crypto');
 
-/* ---------- passwords (built-in scrypt, no extra packages) ---------- */
-function hashPassword(pw) {
-  const salt = crypto.randomBytes(16).toString('hex');
-  const key = crypto.scryptSync(pw, salt, 64).toString('hex');
-  return `${salt}:${key}`;
+/* ---------- passwords ----------
+   A password is never stored. We store a random salt plus a deliberately SLOW hash:
+     1. salt   - fresh random bytes per password, so identical passwords hash differently
+                 and no precomputed table (rainbow table) can be reused across accounts.
+     2. scrypt - the hash itself. It is memory-hard on purpose: each guess costs real
+                 time + RAM, so an attacker cannot try billions of passwords a second.
+                 It is one-way, not encryption - you cannot reverse it, only redo it.
+     3. verify - pull the salt back out, run scrypt again on what was typed, compare.
+     4. timingSafeEqual - compares in constant time so response time never reveals
+                 how many characters matched.
+   Format stays "salt:hexkey" so rows written by older code still verify (no migration). */
+const KEYLEN = 64;
+const derive = (pw, salt) => new Promise((resolve, reject) =>
+  scrypt(String(pw), salt, KEYLEN, (err, key) => (err ? reject(err) : resolve(key))));
+
+async function hashPassword(pw) {
+  const salt = randomBytes(16).toString('hex');
+  return `${salt}:${(await derive(pw, salt)).toString('hex')}`;
 }
-function verifyPassword(pw, stored) {
+
+async function verifyPassword(pw, stored) {
   const [salt, key] = String(stored).split(':');
   if (!salt || !key) return false;
-  const test = crypto.scryptSync(pw, salt, 64);
-  const k = Buffer.from(key, 'hex');
-  return k.length === test.length && crypto.timingSafeEqual(k, test);
+  const test = await derive(pw, salt);
+  const saved = Buffer.from(key, 'hex');
+  return saved.length === test.length && timingSafeEqual(saved, test);
 }
 
 /* ---------- date helpers ---------- */

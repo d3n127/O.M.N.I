@@ -54,8 +54,17 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .form-error { color: #a33a28; background: #fbe6e1; border-radius: 10px; padding: 10px 14px; font-size: 13px; margin-bottom: 14px; }
 [data-theme="dark"] .form-error { color: #f0b3a5; background: #43241d; }
 .form-error:not(.show) { margin: 0 0 14px; }
-.auth { min-height: 100vh; display: grid; place-items: center; padding: 40px 16px; position: relative; }
+/* Header + card are the two grid rows: nav sits on top, card centers in the space below. */
+.auth { min-height: 100vh; display: grid; grid-template-rows: auto 1fr; place-items: center; padding: 0 16px 44px; position: relative; }
 .auth-decor { position: fixed; inset: 0; overflow: hidden; pointer-events: none; }
+.auth-nav { position: relative; z-index: 10; width: 100%; }
+.auth-nav-in { width: min(1140px, 100%); margin-inline: auto; height: 76px; display: flex; align-items: center; gap: 16px; }
+.auth-nav .logo span { color: #fff; }
+.auth-nav-act { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+.auth-nav .round { background: rgba(255, 255, 255, .12); border-color: rgba(255, 255, 255, .3); color: #fff; }
+.auth-nav .round:hover { background: #fff; color: var(--ink); }
+.auth-nav .btn { background: rgba(255, 255, 255, .14); border: 1.5px solid rgba(255, 255, 255, .35); color: #fff; }
+.auth-nav .btn:hover { background: #fff; color: var(--on-tile); }
 .t-student { background: #173d3a; --sun: #ffd04a; }
 .t-admin { background: #223a58; --sun: #e8957f; }
 .sun-wrap { position: absolute; top: 220px; right: 200px; width: 0; height: 0; pointer-events: none; }
@@ -66,9 +75,6 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .o1 { width: 620px; height: 620px; }
 .o2 { width: 900px; height: 900px; }
 .auth-card { position: relative; width: 550px; max-width: 100%; background: var(--paper); border-radius: 28px; padding: 48px 52px 44px; box-shadow: 0 30px 80px rgba(0, 0, 0, .25); }
-.auth-card .back { display: inline-block; font-size: 12px; color: var(--muted); margin-bottom: 28px; }
-.auth-card .back:hover { color: var(--accent); }
-.auth-card .logo { display: flex; margin-bottom: 36px; }
 .auth-card h1 { font-size: 52px; margin: 10px 0 14px; }
 .auth-card .sub { color: var(--muted); font-size: 15px; }
 .auth-card .btn.block { margin-top: 24px; }
@@ -198,7 +204,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 @keyframes toast { 0% { opacity: 0; transform: translate(-50%, 12px); } 8%, 88% { opacity: 1; transform: translate(-50%, 0); } 100% { opacity: 0; transform: translate(-50%, 12px); } }
 
 @media (max-width: 1100px) { .sun-wrap { right: 40px; top: 60px; transform: scale(.5); } }
-@media (max-width: 640px) { .role-grid { grid-template-columns: 1fr; } .auth-card { padding: 32px 24px; } .auth-card h1 { font-size: 40px; } .modal-box { padding: 36px 24px 28px; } }
+@media (max-width: 640px) { .role-grid { grid-template-columns: 1fr; } .auth-nav-in { height: 66px; gap: 10px; } .auth-nav .btn { padding: 0 13px; } .auth-card { padding: 32px 24px; } .auth-card h1 { font-size: 40px; } .modal-box { padding: 36px 24px 28px; } }
 [data-theme="dark"] .t-student { background: #0d1f1c; }
 [data-theme="dark"] .t-admin { background: #172a43; }
 

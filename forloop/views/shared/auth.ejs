@@ -2,9 +2,21 @@
 <% var isAdviser = role === 'adviser'; %>
 <%- include('head', { title: isRegister ? 'Create your account' : 'Sign in', bodyClass: 'auth ' + (isRegister && isAdviser ? 't-admin' : 't-student') }) %>
 <div class="auth-decor" aria-hidden="true"><div class="sun-wrap"><i class="orbit o2"></i><i class="orbit o1"></i><i class="halo"></i><i class="sun"></i></div></div>
+
+<!-- Site header for the sign-in / sign-up screen: brand (home), theme toggle, other-mode link. -->
+<header class="auth-nav">
+  <div class="auth-nav-in">
+    <%- include('logo') %>
+    <div class="auth-nav-act">
+      <button class="round theme-btn" type="button" data-theme-toggle aria-label="Switch between light and dark theme">
+        <span class="th-ic"><%- icon('sun', 18, 'th-sun') %><%- icon('moon', 18, 'th-moon') %></span>
+      </button>
+      <a class="btn small" href="<%= isRegister ? '/login' : '/register' %>"><%= isRegister ? 'Sign in' : 'Get started' %></a>
+    </div>
+  </div>
+</header>
+
 <section class="auth-card" data-mode="<%= mode %>" id="authCard">
-  <a class="back" href="/">← Back to home</a>
-  <%- include('logo') %>
   <p class="eyebrow">Student organization portal</p>
   <h1 id="authTitle"><%= isRegister ? 'Create your space.' : 'Welcome back.' %></h1>
   <p class="sub" id="authSub"><%= isRegister ? 'Join the community and start making an impact.' : 'Sign in to continue your campus journey.' %></p>

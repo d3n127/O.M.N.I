@@ -12,8 +12,8 @@
       <button class="round theme-btn" type="button" data-theme-toggle aria-label="Switch between light and dark theme">
         <span class="th-ic"><%- icon('sun', 18, 'th-sun') %><%- icon('moon', 18, 'th-moon') %></span>
       </button>
-      <a class="btn small outline" href="#choose">Sign in</a>
-      <a class="btn small" href="#choose">Get started</a>
+      <a class="btn small outline" href="/login">Sign in</a>
+      <a class="btn small" href="/register">Get started</a>
     </div>
   </div>
 </header>
@@ -25,10 +25,10 @@
     <h1>Your campus.<br>Your community.</h1>
     <p class="lp-sub">Find the organizations that fit you, apply in one place, and keep up with every event — while officers get the tools to run it all.</p>
     <div class="lp-cta">
-      <a class="btn lp-primary" href="/login/student">I’m a student <%- icon('arrow', 18) %></a>
-      <a class="btn lp-ghost" href="/login/admin">I run an organization <%- icon('arrow', 18) %></a>
+      <a class="btn lp-primary" href="/register">I’m a student <%- icon('arrow', 18) %></a>
+      <a class="btn lp-ghost" href="/register?role=adviser">I run an organization <%- icon('arrow', 18) %></a>
     </div>
-    <p class="lp-note">Two portals, two roles. Students discover, apply and RSVP. Officers manage members, applications, events and reports.</p>
+    <p class="lp-note">One sign-in for everyone. Your role decides your portal — students discover, apply and RSVP; advisers manage members, applications, events and reports.</p>
   </div>
 </section>
 
@@ -68,8 +68,8 @@
     <div class="lp-steps">
       <article class="lp-step">
         <b>1</b>
-        <h3>Pick your portal</h3>
-        <p>Students and organization officers sign in through their own door, so you always land in the right place.</p>
+        <h3>Create one account</h3>
+        <p>A single sign-up and sign-in. You choose whether you’re a student or an organization adviser — that choice picks your portal.</p>
       </article>
       <article class="lp-step">
         <b>2</b>
@@ -89,15 +89,15 @@
   <div class="lp-wrap">
     <p class="eyebrow">Get started</p>
     <h2 class="lp-h2">Choose how you’ll use O.M.N.I</h2>
-    <p class="lp-lead">Your role decides which portal you land in — and which tools you can reach.</p>
+    <p class="lp-lead">One sign-up — your choice decides which portal you land in, and which tools you can reach.</p>
     <div class="role-grid lp-roles">
-      <a class="role r-yellow" href="/login/student">
+      <a class="role r-yellow" href="/register">
         <span class="role-ic"><%- icon('userplus', 26) %></span>
         <strong>I’m a student</strong>
         <small>Find organizations, apply, and join events.</small>
         <span class="go"><%- icon('arrow', 20) %></span>
       </a>
-      <a class="role r-navy" href="/login/admin">
+      <a class="role r-navy" href="/register?role=adviser">
         <span class="role-ic"><%- icon('building', 26) %></span>
         <strong>I run an organization</strong>
         <small>Manage members, applications, events and reports.</small>
@@ -114,10 +114,10 @@
       <p>One portal for campus organizations and the students who join them.</p>
     </div>
     <div class="lp-foot-col">
-      <h4>Portals</h4>
-      <a href="/login/student">Student sign in</a>
-      <a href="/login/admin">Organization sign in</a>
-      <a href="/login/student?mode=register">Create an account</a>
+      <h4>Account</h4>
+      <a href="/login">Sign in</a>
+      <a href="/register">Create an account</a>
+      <a href="/register?role=adviser">Register an organization</a>
     </div>
     <div class="lp-foot-col">
       <h4>Explore</h4>

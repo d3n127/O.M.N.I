@@ -10,8 +10,8 @@
     <h2><%= u.full_name %></h2>
     <p class="muted"><%= u.email %></p>
     <div class="pf-chips">
-      <% if (u.role === 'admin') { %>
-        <span class="pf-chip">Organization officer<%= orgName ? ' · ' + orgName : '' %></span>
+      <% if (u.role === 'adviser') { %>
+        <span class="pf-chip">Adviser<%= orgName ? ' · ' + orgName : '' %></span>
       <% } else { %>
         <span class="pf-chip">Student · ID <%= u.student_id || '—' %> · <%= u.program %> · Year <%= u.year_level %></span>
         <span class="pf-chip"><%= deptAbbr(u.college) %></span>

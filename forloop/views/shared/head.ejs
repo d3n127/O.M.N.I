@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/css/shared/base.css">
   <% if (me && me.role === 'student') { %><link rel="stylesheet" href="/css/student/student.css"><% } %>
-  <% if (me && me.role === 'admin') { %><link rel="stylesheet" href="/css/admin/admin.css"><% } %>
+  <% if (me && me.role === 'adviser') { %><link rel="stylesheet" href="/css/admin/admin.css"><% } %>
   <script>try{if(localStorage.getItem('theme')==='dark')document.documentElement.setAttribute('data-theme','dark');}catch(e){}</script>
 </head>
 <body class="<%= locals.bodyClass || '' %>">

@@ -47,7 +47,7 @@
     if (e.key === 'Escape') $$('.modal').forEach(function (m) { m.hidden = true; });
   });
 
-  /* sign in / create account tabs */
+  /* sign in / create account tabs + the role picker on the unified sign-up */
   var card = $('#authCard');
   if (card) {
     var copy = {
@@ -64,6 +64,29 @@
         $('#authSub').textContent = copy[mode][1];
         var err = $('.form-error.show', card); if (err) err.remove();
       });
+    });
+
+    /* role picker: choosing Adviser reveals the organization field (students never get one) */
+    var orgField = $('#orgField');
+    var orgInput = $('#r_org');
+    var regHint = $('#regHint');
+    $$('.role-opt', card).forEach(function (opt) {
+      var radio = $('input[type=radio]', opt);
+      if (!radio) return;
+      function pick() {
+        $$('.role-opt', card).forEach(function (o) { o.classList.toggle('on', o === opt); });
+        var adviser = radio.value === 'adviser';
+        if (orgField) orgField.hidden = !adviser;
+        if (orgInput) orgInput.required = adviser;
+        if (regHint) regHint.textContent = adviser
+          ? 'Your organization is created with your account.'
+          : "Right after signing up you'll set up your required student information.";
+        var body = document.body;
+        body.classList.toggle('t-admin', adviser);
+        body.classList.toggle('t-student', !adviser);
+      }
+      radio.addEventListener('change', pick);
+      opt.addEventListener('click', function () { radio.checked = true; pick(); });
     });
   }
 

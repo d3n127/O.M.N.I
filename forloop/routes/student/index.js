@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../../conn').promise();
-const { wrap, requireRole, lockNonMembers, requireStudentInfo } = require('../../middleware');
+const { wrap } = require('../../utils');
+const { requireRole, lockNonMembers, requireStudentInfo } = require('../auth');
 const { applyToOrg } = require('../apply');
 
 const router = express.Router();

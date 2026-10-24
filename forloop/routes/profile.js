@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../conn').promise();
-const { wrap, flash, hasOrg, requireAuth, requireStudentInfo } = require('../middleware');
-const { hashPassword, verifyPassword, DEPT_NAMES } = require('../utils');
+const { wrap, flash, DEPT_NAMES, hashPassword, verifyPassword } = require('../utils');
+const { hasOrg, requireAuth, requireStudentInfo } = require('./auth');
 
 const router = express.Router();
 
@@ -11,14 +11,15 @@ const router = express.Router();
    visitors to the landing page instead of their portal's login screen. */
 const PAGES = ['/student-info', '/profile', '/settings', '/profile/password'];
 
-/* any logged-in user (student, nonmember or admin) may manage their profile */
+/* any logged-in user (student, nonmember or adviser) may manage their profile */
 router.use(PAGES, requireAuth);
 
-/* pick the portal shell the page renders inside (admin sidebar / student topbar / nonmember topbar) */
+/* pick the portal shell the page renders inside (adviser sidebar / student topbar / nonmember topbar).
+   Note: the shell name is the VIEW DIRECTORY (views/admin), not the role — the role is 'adviser'. */
 router.use(PAGES, wrap(async (req, res, next) => {
   const u = req.session.user;
   res.locals.portal = 'nonmember';
-  if (u.role === 'admin') {
+  if (u.role === 'adviser') {
     const [[org]] = await db.query('SELECT * FROM organizations WHERE id = ?', [u.org_id]);
     if (!org) return req.session.destroy(() => res.redirect('/'));
     res.locals.org = org;
@@ -45,11 +46,11 @@ function studentInfoValues(body) {
   };
 }
 
-/* only students see this page; officers are sent back to their portal */
+/* only students see this page; advisers are sent back to their portal */
 function studentOnly(req, res) {
   const u = req.session.user;
   if (u.role === 'student') return false;
-  res.redirect(u.role === 'admin' ? '/admin' : '/student');
+  res.redirect(u.role === 'adviser' ? '/admin' : '/student');
   return true;
 }
 
@@ -140,7 +141,8 @@ router.post('/profile', wrap(async (req, res) => {
 
   if (!name) { flash(req, 'Enter your full name.', 'err'); return res.redirect(back); }
   if (!/^\S+@\S+\.\S+$/.test(email)) { flash(req, 'Enter a valid email address.', 'err'); return res.redirect(back); }
-  const [dupe] = await db.query('SELECT id FROM users WHERE email = ? AND role = ? AND id <> ?', [email, role, uid]);
+  /* unified login: an email must identify exactly ONE account, across every role */
+  const [dupe] = await db.query('SELECT id FROM users WHERE email = ? AND id <> ?', [email, uid]);
   if (dupe.length) { flash(req, 'Another account already uses that email.', 'err'); return res.redirect(back); }
 
   if (role === 'student') {

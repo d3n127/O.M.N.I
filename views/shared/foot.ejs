@@ -1,6 +1,0 @@
-<% if (flash) { %><div class="toast <%= flash.type %>" id="toast" role="status"><%= flash.msg %></div><% } %>
-<script src="/js/shared/common.js"></script>
-<% if (me && me.role === 'student') { %><script src="/js/student/student.js"></script><% } %>
-<% if (me && me.role === 'admin') { %><script src="/js/admin/admin.js"></script><% } %>
-</body>
-</html>

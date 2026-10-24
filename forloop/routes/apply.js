@@ -26,7 +26,7 @@ async function applyToOrg(req, res) {
   } else {
     await db.query('INSERT INTO applications (org_id, user_id, intro) VALUES (?,?,?)', [orgId, uid, intro]);
   }
-  await db.query("INSERT INTO notifications (user_id, message) SELECT id, ? FROM users WHERE role = 'admin' AND org_id = ?",
+  await db.query("INSERT INTO notifications (user_id, message) SELECT id, ? FROM users WHERE role = 'adviser' AND org_id = ?",
     [`${req.session.user.name} applied to join ${org.name}.`, orgId]);
   res.json({ ok: true, name: org.name });
 }

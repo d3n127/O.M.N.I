@@ -75,6 +75,19 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent); ou
 .tabs { display: grid; grid-template-columns: 1fr 1fr; margin: 38px 0 6px; border-bottom: 1px solid var(--line); }
 .tabs button { height: 48px; font-weight: 700; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; }
 .tabs button.on { color: var(--accent); border-color: var(--accent); }
+/* role picker on the unified sign-up form */
+.role-pick { display: grid; gap: 10px; margin: 0; }
+.role-opt { display: flex; align-items: center; gap: 12px; margin: 0; padding: 13px 15px; border: 1.5px solid var(--line); border-radius: 14px; background: var(--surface); cursor: pointer; font-weight: 400; transition: border-color .15s, background .15s; }
+.role-opt:hover { border-color: var(--accent); }
+.role-opt input { position: absolute; opacity: 0; width: 0; height: 0; outline: 0; }
+.role-opt.on { border-color: var(--accent); background: var(--green); }
+.role-opt.on .role-tx strong, .role-opt.on .role-tx small { color: #fff; }
+.role-opt.on .role-ic { background: rgba(255, 255, 255, .16); color: #fff; }
+.role-ic { width: 40px; height: 40px; border-radius: 11px; display: grid; place-items: center; flex: none; background: var(--tan); color: var(--ink); transition: background .15s; }
+.role-tx { display: grid; line-height: 1.25; }
+.role-tx strong { font-size: 14px; font-weight: 700; }
+.role-tx small { font-size: 12px; color: var(--muted); font-weight: 400; }
+.role-opt input:focus-visible + .role-ic { outline: 3px solid var(--yellow); outline-offset: 2px; }
 .hint { text-align: center; font-size: 11px; color: #9b8f86; margin-top: 12px; }
 [data-theme="dark"] .hint { color: var(--muted); }
 

@@ -1,5 +1,16 @@
 const { randomBytes, scrypt, timingSafeEqual } = require('crypto');
 
+/* ---------- request helpers (moved here from middleware.js) ----------
+   wrap  - lets async route handlers throw errors safely into Express instead of
+           leaving a rejected promise that would hang the request.
+   flash - stash a one-time message so the NEXT page load can show it as a toast
+           (the page consumes and clears it, so it never appears twice).
+   ROLES - every role that exists in this app, imported by routes so the list of
+           valid roles lives in exactly one place. */
+const wrap = (fn) => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+const flash = (req, msg, type = 'ok') => { req.session.flash = { msg, type }; };
+const ROLES = ['student', 'adviser'];
+
 /* ---------- passwords ----------
    A password is never stored. We store a random salt plus a deliberately SLOW hash:
      1. salt   - fresh random bytes per password, so identical passwords hash differently
@@ -90,4 +101,4 @@ const icon = (name, size = 20, cls = '') =>
 
 const viewHelpers = { icon, initials, fmtShort, fmtDay, fmtMon, fmtLong, fmtMonthYear, fmtTime, deptAbbr };
 
-module.exports = { hashPassword, verifyPassword, ymd, MON, DEPARTMENTS, DEPT_NAMES, ...viewHelpers, viewHelpers };
+module.exports = { hashPassword, verifyPassword, ymd, MON, DEPARTMENTS, DEPT_NAMES, wrap, flash, ROLES, ...viewHelpers, viewHelpers };

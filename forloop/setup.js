@@ -25,7 +25,7 @@ CREATE TABLE users (
   full_name VARCHAR(120) NOT NULL,
   email VARCHAR(160) NOT NULL,
   password_hash VARCHAR(200) NOT NULL,
-  role ENUM('student','admin') NOT NULL,
+  role ENUM('student','adviser') NOT NULL,
   student_id VARCHAR(24) NULL,
   program VARCHAR(100) NOT NULL DEFAULT 'Undeclared',
   year_level TINYINT NOT NULL DEFAULT 1,
@@ -36,7 +36,7 @@ CREATE TABLE users (
   profile_complete TINYINT(1) NOT NULL DEFAULT 0,
   org_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_email_role (email, role),
+  UNIQUE KEY uq_email (email),
   UNIQUE KEY uq_student_id (student_id),
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE SET NULL
 );
@@ -128,7 +128,7 @@ const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); retur
       [name, email, await hashPassword('password'), role, program, year, org]);
 
   const maya = await user('Maya Alvarez', 'maya@north.edu', 'BS Computer Science', 2);
-  const alex = await user('Alex Rivera', 'admin@codecraft.edu', 'Faculty Advisor', 1, 'admin', O.UIPC);
+  const alex = await user('Alex Rivera', 'admin@codecraft.edu', 'Faculty Advisor', 1, 'adviser', O.UIPC);
 
   const core = [
     ['Theo Kim', 'theo@north.edu', 'BS Information Systems', 3, 'President', '2023-10-05'],
@@ -205,5 +205,5 @@ const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); retur
 
   await c.end();
   cfg.destroy(); // release the connection conn.js opened, so this script can exit
-  console.log('\nDatabase "%s" is ready.\n  Student:  maya@north.edu / password\n  Admin:    admin@codecraft.edu / password (UIPC)\n', cfg.config.database);
+  console.log('\nDatabase "%s" is ready.\n  Student:  maya@north.edu / password\n  Adviser:  admin@codecraft.edu / password (UIPC)\n', cfg.config.database);
 })().catch((e) => { console.error('Setup failed:', e.message); process.exit(1); });

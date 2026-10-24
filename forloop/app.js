@@ -4,8 +4,7 @@ const session = require('express-session');
 const db = require('./conn').promise();
 db.config.dateStrings = true; // DATE columns come back as "YYYY-MM-DD" (views call .slice())
 db.on('error', (err) => console.error('MySQL error (is MySQL running? run "npm run setup" if fourloop_db is missing):', err.message));
-const { viewHelpers } = require('./utils');
-const { wrap, loadUser } = require('./middleware');
+const { viewHelpers, wrap } = require('./utils');
 
 const app = express();
 
@@ -23,6 +22,21 @@ app.use(session({
   saveUninitialized: false,
   cookie: { maxAge: 1000 * 60 * 60 * 8 }
 }));
+
+/* ROLE SOURCE OF TRUTH: the session cookie only carries the user id; the role is re-read
+   from the database on every request. So (a) an officer demoting a member via
+   POST /members/:id/role takes effect on that member's very next request instead of
+   after their session expires, and (b) a deleted account is logged out immediately.
+   This lives in app.js because it must run before EVERY route — it is not scoped
+   to one router, so there is no route file it would belong to. */
+const loadUser = wrap(async (req, res, next) => {
+  const s = req.session.user;
+  if (!s) return next();
+  const [[u]] = await db.query('SELECT id, full_name, role, org_id FROM users WHERE id = ?', [s.id]);
+  if (!u) return req.session.destroy(() => next());
+  req.session.user = { id: u.id, name: u.full_name, role: u.role, org_id: u.org_id };
+  next();
+});
 
 // re-read the signed-in user (and their role) from the DB before anything else runs
 app.use(loadUser);

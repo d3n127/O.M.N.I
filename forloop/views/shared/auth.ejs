@@ -1,44 +1,61 @@
-<% const isAdmin = role === 'admin'; %>
-<%- include('head', { title: isAdmin ? 'Organization portal' : 'Student portal', bodyClass: 'auth ' + (isAdmin ? 't-admin' : 't-student') }) %>
+<% var isRegister = mode === 'register'; %>
+<% var isAdviser = role === 'adviser'; %>
+<%- include('head', { title: isRegister ? 'Create your account' : 'Sign in', bodyClass: 'auth ' + (isRegister && isAdviser ? 't-admin' : 't-student') }) %>
 <div class="auth-decor" aria-hidden="true"><div class="sun-wrap"><i class="orbit o2"></i><i class="orbit o1"></i><i class="halo"></i><i class="sun"></i></div></div>
 <section class="auth-card" data-mode="<%= mode %>" id="authCard">
-  <a class="back" href="/">← Back to roles</a>
+  <a class="back" href="/">← Back to home</a>
   <%- include('logo') %>
-  <p class="eyebrow"><%= isAdmin ? 'Organization portal' : 'Student portal' %></p>
-  <h1 id="authTitle"><%= mode === 'register' ? 'Create your space.' : 'Welcome back.' %></h1>
-  <p class="sub" id="authSub"><%= mode === 'register' ? 'Join the community and start making an impact.' : 'Sign in to continue your campus journey.' %></p>
+  <p class="eyebrow">Student organization portal</p>
+  <h1 id="authTitle"><%= isRegister ? 'Create your space.' : 'Welcome back.' %></h1>
+  <p class="sub" id="authSub"><%= isRegister ? 'Join the community and start making an impact.' : 'Sign in to continue your campus journey.' %></p>
 
   <div class="tabs" role="tablist">
-    <button type="button" data-tab="login" class="<%= mode === 'login' ? 'on' : '' %>" role="tab">Sign in</button>
-    <button type="button" data-tab="register" class="<%= mode === 'register' ? 'on' : '' %>" role="tab">Create account</button>
+    <button type="button" data-tab="login" class="<%= isRegister ? '' : 'on' %>" role="tab">Sign in</button>
+    <button type="button" data-tab="register" class="<%= isRegister ? 'on' : '' %>" role="tab">Create account</button>
   </div>
 
   <% if (error) { %><p class="form-error show"><%= error %></p><% } %>
 
-  <form method="post" action="/auth/login" id="loginForm" <%= mode === 'register' ? 'hidden' : '' %>>
-    <input type="hidden" name="role" value="<%= role %>">
+  <!-- ONE sign-in for every role: the account row itself carries the role. -->
+  <form method="post" action="/auth/login" id="loginForm" <%= isRegister ? 'hidden' : '' %>>
     <label for="l_email">University email</label>
     <input id="l_email" type="email" name="email" placeholder="you@university.edu" required value="<%= values.email || '' %>" autocomplete="email">
     <label for="l_pw">Password</label>
     <input id="l_pw" type="password" name="password" placeholder="Your password" required autocomplete="current-password">
     <button class="btn block" type="submit">Sign in <%- icon('arrow', 18) %></button>
-    <p class="hint">Demo account — <%= demo %></p>
+    <p class="hint">Demo — <%= demo %></p>
   </form>
 
-  <form method="post" action="/auth/register" id="registerForm" <%= mode === 'login' ? 'hidden' : '' %>>
-    <input type="hidden" name="role" value="<%= role %>">
+  <!-- ONE sign-up for every role; the choice below decides which portal you land in. -->
+  <form method="post" action="/auth/register" id="registerForm" <%= isRegister ? '' : 'hidden' %>>
     <label for="r_name">Full name</label>
     <input id="r_name" name="full_name" placeholder="Your full name" required value="<%= values.full_name || '' %>" autocomplete="name">
     <label for="r_email">University email</label>
     <input id="r_email" type="email" name="email" placeholder="you@university.edu" required value="<%= values.email || '' %>" autocomplete="email">
     <label for="r_pw">Password</label>
     <input id="r_pw" type="password" name="password" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
-    <% if (isAdmin) { %>
+
+    <label id="roleLabel">I am a…</label>
+    <div class="role-pick" role="radiogroup" aria-labelledby="roleLabel">
+      <label class="role-opt <%= isAdviser ? '' : 'on' %>" for="r_student">
+        <input type="radio" id="r_student" name="role" value="student" <%= isAdviser ? '' : 'checked' %>>
+        <span class="role-ic"><%- icon('userplus', 20) %></span>
+        <span class="role-tx"><strong>Student</strong><small>Discover, apply and join organizations</small></span>
+      </label>
+      <label class="role-opt <%= isAdviser ? 'on' : '' %>" for="r_adviser">
+        <input type="radio" id="r_adviser" name="role" value="adviser" <%= isAdviser ? 'checked' : '' %>>
+        <span class="role-ic"><%- icon('building', 20) %></span>
+        <span class="role-tx"><strong>Adviser</strong><small>Run an organization of your own</small></span>
+      </label>
+    </div>
+
+    <div id="orgField" <%= isAdviser ? '' : 'hidden' %>>
       <label for="r_org">Organization name</label>
-      <input id="r_org" name="org_name" placeholder="e.g. UIPC" required value="<%= values.org_name || '' %>">
-    <% } %>
+      <input id="r_org" name="org_name" placeholder="e.g. UIPC" value="<%= values.org_name || '' %>" <%= isAdviser ? 'required' : '' %>>
+    </div>
+
     <button class="btn block" type="submit">Create account <%- icon('arrow', 18) %></button>
-    <% if (!isAdmin) { %><p class="hint">Right after signing up you'll set up your required student information.</p><% } %>
+    <p class="hint" id="regHint"><%= isAdviser ? 'Your organization is created with your account.' : "Right after signing up you'll set up your required student information." %></p>
   </form>
 </section>
 <%- include('foot') %>

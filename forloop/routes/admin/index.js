@@ -1,10 +1,11 @@
 const express = require('express');
 const db = require('../../conn').promise();
-const { MON, DEPT_NAMES } = require('../../utils');
-const { wrap, requireRole, flash } = require('../../middleware');
+const { MON, DEPT_NAMES, wrap, flash } = require('../../utils');
+const { requireRole } = require('../auth');
 
 const router = express.Router();
-router.use(requireRole('admin'));
+/* RBAC: the organization portal is adviser-only */
+router.use(requireRole('adviser'));
 
 const ROLES = ['President', 'Vice President', 'Events Lead', 'Treasurer', 'Secretary', 'Member'];
 const CATEGORIES = ['Technology', 'Creative', 'Academic', 'Sports', 'Community', 'Business'];
@@ -12,7 +13,7 @@ const CATEGORIES = ['Technology', 'Creative', 'Academic', 'Sports', 'Community',
 // same visibility predicate as routes/student/index.js (spec-events §2.1)
 const UPCOMING = "e.status = 'published' AND e.event_date >= CURDATE()";
 
-// load this admin's organization + pending badge for every admin page
+// load this adviser's organization + pending badge for every advisor page
 router.use(wrap(async (req, res, next) => {
   const [[org]] = await db.query('SELECT * FROM organizations WHERE id = ?', [req.session.user.org_id]);
   if (!org) return req.session.destroy(() => res.redirect('/'));

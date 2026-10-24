@@ -38,7 +38,7 @@ CREATE TABLE users (
   full_name VARCHAR(120) NOT NULL,
   email VARCHAR(160) NOT NULL,
   password_hash VARCHAR(200) NOT NULL,
-  role ENUM('student','admin') NOT NULL,
+  role ENUM('student','adviser') NOT NULL,
   student_id VARCHAR(24) NULL,
   program VARCHAR(100) NOT NULL DEFAULT 'Undeclared',
   year_level TINYINT NOT NULL DEFAULT 1,
@@ -49,7 +49,7 @@ CREATE TABLE users (
   profile_complete TINYINT(1) NOT NULL DEFAULT 0,
   org_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY uq_email_role (email, role),
+  UNIQUE KEY uq_email (email),
   UNIQUE KEY uq_student_id (student_id),
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE SET NULL
 );
@@ -133,7 +133,7 @@ UPDATE organizations SET satisfaction = 4.8 WHERE id = 3;
 -- users (ids 1..40)
 INSERT INTO users (id, full_name, email, password_hash, role, program, year_level, org_id) VALUES
 (1,  'Maya Alvarez',  'maya@north.edu',         @pw, 'student', 'Computer Science',    2, NULL),
-(2,  'Alex Rivera',   'admin@codecraft.edu',    @pw, 'admin',   'Faculty Advisor',     1, 3),
+(2,  'Alex Rivera',   'admin@codecraft.edu',    @pw, 'adviser', 'Faculty Advisor',     1, 3),
 (3,  'Theo Kim',      'theo@north.edu',         @pw, 'student', 'Information Systems', 3, NULL),
 (4,  'Morgan Liu',    'morgan@north.edu',       @pw, 'student', 'Computer Science',    3, NULL),
 (5,  'Eli Parker',    'eli@north.edu',          @pw, 'student', 'Software Engineering',2, NULL),

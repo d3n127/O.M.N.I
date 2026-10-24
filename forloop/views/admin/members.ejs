@@ -9,14 +9,14 @@
 </div>
 
 <div class="table card flush">
-  <div class="tr th"><span>Member</span><span>Role</span><span>Joined</span><span>Actions</span></div>
+  <div class="tr th"><span data-label="Member">Member</span><span data-label="Role">Role</span><span data-label="Joined">Joined</span><span data-label="Actions">Actions</span></div>
   <% if (!members.length) { %><p class="empty pad">No members found.</p><% } %>
   <% members.forEach(function (m) { %>
     <div class="tr">
-      <span class="who"><i class="av"><%= initials(m.full_name) %></i><strong><%= m.full_name %></strong></span>
-      <span><%= m.role_title %></span>
-      <span><%= fmtMonthYear(m.joined_at) %></span>
-      <span class="act">
+      <span class="who" data-label="Member"><i class="av"><%= initials(m.full_name) %></i><strong><%= m.full_name %></strong></span>
+      <span data-label="Role"><%= m.role_title %></span>
+      <span data-label="Joined"><%= fmtMonthYear(m.joined_at) %></span>
+      <span class="act" data-label="Actions">
         <details class="menu">
           <summary aria-label="Member actions"><%- icon('dots', 20) %></summary>
           <div class="menu-box">

@@ -33,4 +33,21 @@
       var t = $(inp.dataset.bind); if (t) t.textContent = inp.value;
     });
   });
+
+  /* mobile sidebar drawer */
+  var toggle = document.querySelector('.menu-toggle');
+  var shell = document.querySelector('.shell');
+  if (toggle && shell) {
+    toggle.addEventListener('click', function () {
+      var open = shell.classList.toggle('nav-open');
+      toggle.setAttribute('aria-expanded', open);
+    });
+    /* close drawer when clicking a nav link */
+    shell.querySelectorAll('.side a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        shell.classList.remove('nav-open');
+        toggle.setAttribute('aria-expanded', 'false');
+      });
+    });
+  }
 })();

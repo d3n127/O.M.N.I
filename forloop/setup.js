@@ -20,6 +20,17 @@ CREATE TABLE organizations (
   satisfaction DECIMAL(2,1) NOT NULL DEFAULT 4.5,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+/* Per-organization officer hierarchy. Precedence: lower number = higher rank
+   (President = 1 … Member = last). Advisers can reorder / add / delete roles. */
+CREATE TABLE org_roles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  org_id INT NOT NULL,
+  role_title VARCHAR(40) NOT NULL,
+  precedence INT NOT NULL DEFAULT 0,
+  is_officer TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_org_role (org_id, role_title),
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+);
 CREATE TABLE users (
   id INT AUTO_INCREMENT PRIMARY KEY,
   full_name VARCHAR(120) NOT NULL,
@@ -116,6 +127,17 @@ const addDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); retur
   ];
   for (const o of orgs) {
     O[o[0]] = await ins('INSERT INTO organizations (name,description,category,tags,color,logo_text,logo_style,meeting_schedule) VALUES (?,?,?,?,?,?,?,?)', o);
+  }
+  /* Seed the default officer hierarchy for every organization. */
+  const DEFAULT_ROLES = [
+    ['President', 1, 1], ['Vice President', 2, 1], ['Events Lead', 3, 1],
+    ['Treasurer', 4, 1], ['Secretary', 5, 1], ['Member', 6, 0]
+  ];
+  for (const orgId of Object.values(O)) {
+    for (const [title, prec, officer] of DEFAULT_ROLES) {
+      await c.query('INSERT INTO org_roles (org_id, role_title, precedence, is_officer) VALUES (?,?,?,?)',
+        [orgId, title, prec, officer]);
+    }
   }
   await c.query('UPDATE organizations SET satisfaction = 4.8 WHERE id = ?', [O.UIPC]);
   /* who can join: International = any department; the rest are tied to one department */

@@ -1,0 +1,58 @@
+<%- include('partials/top') %>
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Officer hierarchy</p>
+    <h1 class="page-title">Officer roles</h1>
+    <p class="lead">Customize your organization’s officer ranks. Use the up/down arrows to set precedence (top = highest rank).</p>
+  </div>
+  <button class="btn" data-open="addRoleModal"><%- icon('plus', 18) %> Add role</button>
+</div>
+
+<div class="card flush">
+  <div class="tr th"><span style="width:2.2fr">Role</span><span style="width:1.6fr">Precedence</span><span style="width:1.1fr">Members</span><span style="width:.7fr; text-align:right">Actions</span></div>
+  <% if (!roles.length) { %><p class="empty pad">No roles defined.</p><% } %>
+  <% roles.forEach(function (r) { %>
+    <div class="tr" style="grid-template-columns: 2.2fr 1.6fr 1.1fr .7fr">
+      <span style="color:var(--green)"><strong><%= r.role_title %></strong><br><small><%= r.is_officer ? 'Officer role' : 'Member role' %></small></span>
+      <span><%= r.precedence %></span>
+      <span><%= useCount[r.role_title] || 0 %> member<%= (useCount[r.role_title] || 0) == 1 ? '' : 's' %></span>
+      <span class="act">
+        <% if (r.precedence > 1) { %>
+          <form method="post" action="/admin/officers" style="display:inline-block; margin:0 4px 0 0">
+            <input type="hidden" name="action" value="reorder">
+            <input type="hidden" name="role_id" value="<%= r.id %>">
+            <input type="hidden" name="dir" value="up">
+            <button class="btn small outline" style="height:34px;padding:0 10px;font-size:12px"><%= icon('chevronUp',14) %></button>
+          </form>
+        <% } %>
+        <form method="post" action="/admin/officers" style="display:inline-block; margin:0 4px 0 0">
+          <input type="hidden" name="action" value="reorder">
+          <input type="hidden" name="role_id" value="<%= r.id %>">
+          <input type="hidden" name="dir" value="down">
+          <button class="btn small outline" style="height:34px;padding:0 10px;font-size:12px"><%= icon('chevronDown',14) %></button>
+        </form>
+        <form method="post" action="/admin/officers" style="display:inline-block; margin:0" data-confirm="Remove role <%= r.role_title %>?">
+          <input type="hidden" name="action" value="remove">
+          <input type="hidden" name="role_id" value="<%= r.id %>">
+          <button class="btn small danger" style="height:34px;padding:0 10px;font-size:12px"><%= icon('x',14) %></button>
+        </form>
+      </span>
+    </div>
+  <% }) %>
+</div>
+
+<div class="modal" id="addRoleModal" hidden>
+  <div class="modal-box slim" role="dialog" aria-modal="true">
+    <button class="close" data-close aria-label="Close"><%- icon('x', 18) %></button>
+    <p class="eyebrow">Add role</p>
+    <h2>New officer role</h2>
+    <p class="sub">Give the role a title. It will be appended at the end of the hierarchy.</p>
+    <form method="post" action="/admin/officers" class="form">
+      <input type="hidden" name="action" value="add">
+      <label for="new_role">Role title</label>
+      <input id="new_role" name="role_title" placeholder="e.g. Historian" required>
+      <button class="btn block" type="submit">Add role <%- icon('arrow', 18) %></button>
+    </form>
+  </div>
+</div>
+<%- include('partials/bottom') %>

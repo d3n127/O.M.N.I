@@ -7,8 +7,15 @@ const router = express.Router();
 /* RBAC: the organization portal is adviser-only */
 router.use(requireRole('adviser'));
 
-const ROLES = ['President', 'Vice President', 'Events Lead', 'Treasurer', 'Secretary', 'Member'];
 const CATEGORIES = ['Technology', 'Creative', 'Academic', 'Sports', 'Community', 'Business'];
+
+/* Role titles valid for this organization (loaded per-request in middleware below). */
+function orgRoleTitles(orgRoles) { return orgRoles.map((r) => r.role_title); }
+/* The default role for newly invited members: the lowest-precedence role (e.g. Member). */
+function defaultMemberRole(orgRoles) {
+  const sorted = [...orgRoles].sort((a, b) => b.precedence - a.precedence);
+  return sorted[0] ? sorted[0].role_title : 'Member';
+}
 
 // same visibility predicate as routes/student/index.js (spec-events §2.1)
 const UPCOMING = "e.status = 'published' AND e.event_date >= CURDATE()";
@@ -18,7 +25,9 @@ router.use(wrap(async (req, res, next) => {
   const [[org]] = await db.query('SELECT * FROM organizations WHERE id = ?', [req.session.user.org_id]);
   if (!org) return req.session.destroy(() => res.redirect('/'));
   const [[p]] = await db.query("SELECT COUNT(*) AS c FROM applications WHERE org_id = ? AND status = 'pending'", [org.id]);
+  const [roles] = await db.query('SELECT * FROM org_roles WHERE org_id = ? ORDER BY precedence, id', [org.id]);
   res.locals.org = org;
+  res.locals.orgRoles = roles;
   res.locals.badge = p.c;
   next();
 }));
@@ -109,16 +118,17 @@ router.get('/members', wrap(async (req, res) => {
   const [members] = await db.query(`
     SELECT m.id AS mid, m.role_title, m.joined_at, u.full_name, u.email
     FROM memberships m JOIN users u ON u.id = m.user_id
+    LEFT JOIN org_roles o ON o.org_id = m.org_id AND o.role_title = m.role_title
     WHERE m.org_id = ? ${where}
-    ORDER BY FIELD(m.role_title, 'President', 'Vice President', 'Events Lead', 'Treasurer', 'Secretary', 'Member'), m.joined_at`, params);
-  res.render('admin/members', { title: 'Members', active: 'members', members, q, roles: ROLES });
+    ORDER BY COALESCE(o.precedence, 999), m.joined_at`, params);
+  res.render('admin/members', { title: 'Members', active: 'members', members, q, roles: res.locals.orgRoles });
 }));
 
 router.post('/members/invite', wrap(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const [[u]] = await db.query("SELECT id, full_name FROM users WHERE email = ? AND role = 'student'", [email]);
   if (!u) { flash(req, 'No student account uses that email yet. Ask them to sign up first.', 'err'); return res.redirect('/admin/members'); }
-  const [r] = await db.query("INSERT IGNORE INTO memberships (org_id, user_id, role_title, joined_at) VALUES (?,?, 'Member', CURDATE())", [res.locals.org.id, u.id]);
+  const [r] = await db.query("INSERT IGNORE INTO memberships (org_id, user_id, role_title, joined_at) VALUES (?,?, ?, CURDATE())", [res.locals.org.id, u.id, defaultMemberRole(res.locals.orgRoles)]);
   if (!r.affectedRows) { flash(req, `${u.full_name} is already a member.`, 'err'); return res.redirect('/admin/members'); }
   await db.query('INSERT INTO notifications (user_id, message) VALUES (?,?)', [u.id, `You were added to ${res.locals.org.name}. Welcome!`]);
   flash(req, `${u.full_name} joined ${res.locals.org.name}.`);
@@ -126,7 +136,8 @@ router.post('/members/invite', wrap(async (req, res) => {
 }));
 
 router.post('/members/:mid/role', wrap(async (req, res) => {
-  if (ROLES.includes(req.body.role)) {
+  const roleTitles = orgRoleTitles(res.locals.orgRoles);
+  if (roleTitles.includes(req.body.role)) {
     await db.query('UPDATE memberships SET role_title = ? WHERE id = ? AND org_id = ?', [req.body.role, req.params.mid, res.locals.org.id]);
     flash(req, 'Role updated.');
   }
@@ -137,6 +148,56 @@ router.post('/members/:mid/remove', wrap(async (req, res) => {
   await db.query('DELETE FROM memberships WHERE id = ? AND org_id = ?', [req.params.mid, res.locals.org.id]);
   flash(req, 'Member removed.');
   res.redirect('/admin/members');
+}));
+
+/* ---------- Officer hierarchy ---------- */
+router.get('/officers', wrap(async (req, res) => {
+  const roles = res.locals.orgRoles;
+  const [usage] = await db.query(`
+    SELECT o.role_title, COUNT(m.id) AS n
+    FROM org_roles o LEFT JOIN memberships m ON m.org_id = o.org_id AND m.role_title = o.role_title
+    WHERE o.org_id = ? GROUP BY o.id`, [res.locals.org.id]);
+  const useCount = {};
+  usage.forEach((u) => { useCount[u.role_title] = Number(u.n); });
+  res.render('admin/officers', { title: 'Officers', active: 'officers', roles, useCount });
+}));
+
+router.post('/officers', wrap(async (req, res) => {
+  const orgId = res.locals.org.id;
+  const action = req.body.action;
+  const roles = res.locals.orgRoles;
+
+  if (action === 'reorder') {
+    const id = Number(req.body.role_id);
+    const dir = req.body.dir; // 'up' or 'down'
+    const role = roles.find((r) => r.id === id);
+    if (!role) { flash(req, 'Role not found.', 'err'); return res.redirect('/admin/officers'); }
+    const target = dir === 'up'
+      ? roles.find((r) => r.precedence === role.precedence - 1)
+      : roles.find((r) => r.precedence === role.precedence + 1);
+    if (!target) { flash(req, 'Cannot move further.', 'err'); return res.redirect('/admin/officers'); }
+    await db.query('UPDATE org_roles SET precedence = ? WHERE id = ? AND org_id = ?', [target.precedence, id, orgId]);
+    await db.query('UPDATE org_roles SET precedence = ? WHERE id = ? AND org_id = ?', [role.precedence, target.id, orgId]);
+    flash(req, `Role “${role.role_title}” moved ${dir}.`);
+  } else if (action === 'add') {
+    const title = String(req.body.role_title || '').trim();
+    if (!title) { flash(req, 'Role title cannot be empty.', 'err'); return res.redirect('/admin/officers'); }
+    const titles = roles.map((r) => r.role_title);
+    if (titles.includes(title)) { flash(req, 'That role already exists.', 'err'); return res.redirect('/admin/officers'); }
+    const nextPrec = Math.max(0, ...roles.map((r) => r.precedence)) + 1;
+    await db.query('INSERT INTO org_roles (org_id, role_title, precedence, is_officer) VALUES (?,?,?,1)', [orgId, title, nextPrec]);
+    flash(req, `Role “${title}” added.`);
+  } else if (action === 'remove') {
+    const id = Number(req.body.role_id);
+    const role = roles.find((r) => r.id === id);
+    if (!role) { flash(req, 'Role not found.', 'err'); return res.redirect('/admin/officers'); }
+    if (roles.length <= 1) { flash(req, 'Keep at least one role.', 'err'); return res.redirect('/admin/officers'); }
+    const [[{ n }]] = await db.query('SELECT COUNT(*) AS n FROM memberships WHERE org_id = ? AND role_title = ?', [orgId, role.role_title]);
+    if (Number(n) > 0) { flash(req, `Cannot remove “${role.role_title}”: ${n} member(s) currently hold it.`, 'err'); return res.redirect('/admin/officers'); }
+    await db.query('DELETE FROM org_roles WHERE id = ? AND org_id = ?', [id, orgId]);
+    flash(req, `Role “${role.role_title}” removed.`);
+  }
+  res.redirect('/admin/officers');
 }));
 
 /* ---------- Applications ---------- */
@@ -157,7 +218,7 @@ router.post('/applications/:id/:action', wrap(async (req, res) => {
   const approve = action === 'approve';
   await db.query('UPDATE applications SET status = ?, reviewed_at = NOW() WHERE id = ?', [approve ? 'approved' : 'rejected', id]);
   if (approve) {
-    await db.query("INSERT IGNORE INTO memberships (org_id, user_id, role_title, joined_at) VALUES (?,?, 'Member', CURDATE())", [org.id, a.user_id]);
+    await db.query("INSERT IGNORE INTO memberships (org_id, user_id, role_title, joined_at) VALUES (?,?, ?, CURDATE())", [org.id, a.user_id, defaultMemberRole(res.locals.orgRoles)]);
   }
   await db.query('INSERT INTO notifications (user_id, message) VALUES (?,?)', [a.user_id,
     approve ? `${org.name} accepted your application. Welcome aboard!` : `${org.name} declined your application. You can revise it and apply again.`]);

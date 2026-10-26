@@ -13,6 +13,7 @@
       $('#ev_time').value = d.time || '09:00';
       $('#ev_loc').value = d.location || '';
       $('#ev_desc').value = d.desc || '';
+      $('#ev_program').value = d.program || '';
       $('#ev_status').value = d.status || 'published';
     };
     var openNew = function () {
@@ -44,7 +45,7 @@
   $$('[data-bind]').forEach(function (inp) {
     inp.addEventListener('input', function () {
       var t = $(inp.dataset.bind);
-      if (t) t.textContent = inp.value;
+      if (t && !t.querySelector('img')) t.textContent = inp.value;
     });
   });
 

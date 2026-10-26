@@ -1,0 +1,22 @@
+<% if (e.program && e.program.length) { %>
+  <details class="program">
+    <summary><%- icon('clock', 15) %> Speakers &amp; program<span class="prog-count"><%= e.program.length %></span></summary>
+    <% if (e.speakers.length) { %>
+      <p class="prog-label">Speakers</p>
+      <ul class="speakers">
+        <% e.speakers.forEach(function (name) { %>
+          <li><i class="av"><%= initials(name) %></i><span><%= name %></span></li>
+        <% }) %>
+      </ul>
+    <% } %>
+    <p class="prog-label">Event flow</p>
+    <ol class="flow">
+      <% e.program.forEach(function (p) { %>
+        <li>
+          <time><%= p.start_time ? fmtTime(p.start_time) : '' %></time>
+          <div><strong><%= p.title %></strong><% if (p.speaker) { %><small><%= p.speaker %></small><% } %></div>
+        </li>
+      <% }) %>
+    </ol>
+  </details>
+<% } %>

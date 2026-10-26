@@ -1,3 +1,4 @@
 node_modules/
 docs/
-database.sql
+database.sqlpublic/uploads/*
+!public/uploads/.gitkeep

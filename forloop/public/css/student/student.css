@@ -265,6 +265,30 @@
   right: -30px;
   top: -80px;
 }
+.org-top.has-img::before,
+.org-top.has-img::after {
+  display: none;
+}
+.org-cover {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+.org-cover.back {
+  object-fit: cover;
+  filter: blur(14px) brightness(0.7);
+  transform: scale(1.15);
+}
+.org-top .pill,
+.org-top .save {
+  z-index: 1;
+}
+.org-top.has-img .pill {
+  bottom: auto;
+  top: 14px;
+}
 .save {
   position: absolute;
   top: 14px;
@@ -743,4 +767,34 @@
 }
 [data-theme='dark'] .bar {
   background: var(--line);
+}
+
+/* ---------- Tablet and phone polish ---------- */
+.org-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(290px, 100%), 1fr));
+}
+.ev-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(320px, 100%), 1fr));
+}
+@media (min-width: 481px) and (max-width: 1024px) {
+  .topbar {
+    gap: 12px;
+  }
+  .wrap {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+}
+@media (max-width: 768px) {
+  .topnav {
+    gap: 20px;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .topnav::-webkit-scrollbar {
+    display: none;
+  }
+  .topnav a {
+    white-space: nowrap;
+  }
 }

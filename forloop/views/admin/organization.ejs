@@ -28,15 +28,21 @@
     </select>
     <label for="o_tags">Tags <small>(comma separated)</small></label>
     <input id="o_tags" name="tags" value="<%= org.tags %>" placeholder="All code, Community">
+    <% if (org.logo_img.charAt(0) !== '/') { %>
     <label for="o_logo">Logo text <small>(2–3 characters)</small></label>
-    <input id="o_logo" name="logo_text" value="<%= org.logo_text %>" maxlength="4" data-bind="#pvLogo">
+    <input id="o_logo" name="logo_text" value="<%= org.logo_img %>" maxlength="4" data-bind="#pvLogo">
+    <% } %>
+    <label>Organization logo <small>(JPG, PNG or WebP, up to 2 MB)</small></label>
+    <label class="btn upload-btn">Upload logo
+      <input type="file" accept="image/jpeg,image/png,image/webp" data-upload="/upload/org-logo" data-preview="#pvLogo" hidden>
+    </label>
     <label for="o_meet">Meeting schedule</label>
     <input id="o_meet" name="meeting_schedule" value="<%= org.meeting_schedule %>">
   </form>
 
   <aside class="card preview">
     <p class="eyebrow">Live preview</p>
-    <div class="pv-top c-<%= org.color %>"><span class="logo-badge lb-<%= org.logo_style %>" id="pvLogo"><%= org.logo_text %></span></div>
+    <div class="pv-top c-<%= org.color %> <%= org.logo_img.charAt(0) === '/' ? 'has-img' : '' %>"><span class="logo-badge lb-<%= org.logo_style %>" id="pvLogo"><% if (org.logo_img.charAt(0) === '/') { %><img src="<%= org.logo_img %>" alt="" /><% } else { %><%= org.logo_img %><% } %></span></div>
     <h3 id="pvName"><%= org.name %></h3>
     <p id="pvDesc"><%= org.description %></p>
     <strong><%= memberCount %> member<%= memberCount == 1 ? '' : 's' %></strong>

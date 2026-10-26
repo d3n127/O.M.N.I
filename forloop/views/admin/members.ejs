@@ -20,8 +20,8 @@
         <details class="menu">
           <summary aria-label="Member actions"><%- icon('dots', 20) %></summary>
           <div class="menu-box">
-            <% roles.forEach(function (r) { if (r !== m.role_title) { %>
-              <form method="post" action="/admin/members/<%= m.mid %>/role"><input type="hidden" name="role" value="<%= r %>"><button>Make <%= r %></button></form>
+            <% roles.forEach(function (r) { if (r.role_title !== m.role_title) { %>
+              <form method="post" action="/admin/members/<%= m.mid %>/role"><input type="hidden" name="role" value="<%= r.role_title %>"><button>Make <%= r.role_title %></button></form>
             <% } }) %>
             <form method="post" action="/admin/members/<%= m.mid %>/remove" data-confirm="Remove <%= m.full_name %> from <%= org.name %>?"><button class="danger">Remove member</button></form>
           </div>

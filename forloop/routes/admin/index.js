@@ -9,6 +9,7 @@ const db = require('../../conn');
 const { MON, DEPT_NAMES, flash, text, cleanEmail, ymd, parallel } = require('../../utils');
 const { requireRole } = require('../auth');
 const { UPCOMING } = require('../portal');
+const { parseProgram, programToText, saveProgram, attachProgram } = require('../program');
 
 const router = express.Router();
 
@@ -296,10 +297,13 @@ function saveOrganization(req, res, next) {
   const isValidEligibility =
     req.body.eligibility === 'International' || DEPT_NAMES.includes(req.body.eligibility);
   const eligibility = isValidEligibility ? req.body.eligibility : 'International';
-  const logo = text(req.body.logo_text, 4) || name.slice(0, 2).toUpperCase();
+  /* Orgs with an uploaded logo image (a path) keep it; others edit their text logo */
+  const logo = res.locals.org.logo_img.startsWith('/')
+    ? res.locals.org.logo_img
+    : text(req.body.logo_text, 4) || name.slice(0, 2).toUpperCase();
 
   db.query(
-    'UPDATE organizations SET name = ?, description = ?, category = ?, tags = ?, eligibility = ?, logo_text = ?, meeting_schedule = ? WHERE id = ?',
+    'UPDATE organizations SET name = ?, description = ?, category = ?, tags = ?, eligibility = ?, logo_img = ?, meeting_schedule = ? WHERE id = ?',
     [
       name,
       text(req.body.description),
@@ -655,7 +659,15 @@ function showEvents(req, res, next) {
       if (err) {
         return next(err);
       }
-      res.render('admin/events', { title: 'Events', active: 'events', events });
+      attachProgram(events, (err) => {
+        if (err) {
+          return next(err);
+        }
+        events.forEach((e) => {
+          e.programText = programToText(e.program);
+        });
+        res.render('admin/events', { title: 'Events', active: 'events', events });
+      });
     },
   );
 }
@@ -669,6 +681,7 @@ function readEvent(body) {
     location: text(body.location) || 'TBA',
     description: text(body.description),
     status: body.status === 'published' ? 'published' : 'draft',
+    program: parseProgram(body.program),
   };
   const isValid =
     event.title && /^\d{4}-\d{2}-\d{2}$/.test(event.date) && /^\d{2}:\d{2}/.test(event.time);
@@ -702,21 +715,26 @@ function createEvent(req, res, next) {
       event.description,
       event.status,
     ],
-    (err) => {
+    (err, result) => {
       if (err) {
         return next(err);
       }
-      if (event.status !== 'published') {
-        flash(req, 'Draft saved.');
-        return res.redirect('/admin/events');
-      }
-
-      notifyMembers(res.locals.org, event.title, (err) => {
+      saveProgram(result.insertId, event.program, (err) => {
         if (err) {
           return next(err);
         }
-        flash(req, 'Event published. Members were notified.');
-        res.redirect('/admin/events');
+        if (event.status !== 'published') {
+          flash(req, 'Draft saved.');
+          return res.redirect('/admin/events');
+        }
+
+        notifyMembers(res.locals.org, event.title, (err) => {
+          if (err) {
+            return next(err);
+          }
+          flash(req, 'Event published. Members were notified.');
+          res.redirect('/admin/events');
+        });
       });
     },
   );
@@ -761,15 +779,20 @@ function updateEvent(req, res, next) {
           if (err) {
             return next(err);
           }
-          /* Members are only notified the first time an event is published */
-          if (wasPublished || event.status !== 'published') {
-            return finish();
-          }
-          notifyMembers(res.locals.org, event.title, (err) => {
+          saveProgram(req.params.id, event.program, (err) => {
             if (err) {
               return next(err);
             }
-            finish();
+            /* Members are only notified the first time an event is published */
+            if (wasPublished || event.status !== 'published') {
+              return finish();
+            }
+            notifyMembers(res.locals.org, event.title, (err) => {
+              if (err) {
+                return next(err);
+              }
+              finish();
+            });
           });
         },
       );

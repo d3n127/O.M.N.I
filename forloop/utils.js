@@ -211,10 +211,15 @@ const ICONS = {
 const icon = (name, size = 20, cls = '') =>
   `<svg class="ic ${cls}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[name] || ''}</svg>`;
 
+/* Profile picture <img> when there is one, otherwise the person's initials. */
+const avatarInner = (src, name) =>
+  src ? `<img src="${src}" alt="">` : initials(name);
+
 /* Functions every EJS view can call. */
 const viewHelpers = {
   icon,
   initials,
+  avatarInner,
   fmtShort,
   fmtDay,
   fmtMon,

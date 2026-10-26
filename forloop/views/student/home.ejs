@@ -49,7 +49,7 @@
     <% apps.forEach(function (a) { %>
       <div class="prog">
         <div class="prog-top">
-          <span class="mini c-<%= a.color %>"><%= a.logo_text %></span>
+          <span class="mini c-<%= a.color %>"><% if (a.logo_img.charAt(0) === '/') { %><img src="<%= a.logo_img %>" alt="" /><% } else { %><%= a.logo_img %><% } %></span>
           <div><strong><%= a.org_name %></strong><small>Submitted <%= fmtShort(a.created_at) %></small></div>
           <span class="badge <%= a.status %>"><%= a.status === 'pending' ? 'In review' : a.status === 'approved' ? 'Accepted' : 'Declined' %></span>
         </div>

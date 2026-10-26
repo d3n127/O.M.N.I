@@ -29,7 +29,7 @@ CREATE TABLE organizations (
   tags VARCHAR(160) NOT NULL DEFAULT '',
   eligibility VARCHAR(100) NOT NULL DEFAULT 'International',
   color ENUM('yellow','teal','lime','lilac') NOT NULL DEFAULT 'teal',
-  logo_text VARCHAR(4) NOT NULL DEFAULT 'OR',
+  logo_img VARCHAR(120) NOT NULL DEFAULT 'OR',
   logo_style ENUM('tile','navy','cream','dark') NOT NULL DEFAULT 'dark',
   meeting_schedule VARCHAR(120) NOT NULL DEFAULT 'To be announced',
   satisfaction DECIMAL(2,1) NOT NULL DEFAULT 4.5,
@@ -60,6 +60,7 @@ CREATE TABLE users (
   college VARCHAR(100) NULL,
   bio VARCHAR(300) NULL,
   hobbies VARCHAR(300) NULL,
+  avatar VARCHAR(120) NULL,
   profile_complete TINYINT(1) NOT NULL DEFAULT 0,
   org_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -104,6 +105,17 @@ CREATE TABLE events (
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
+-- Running order of an event: segments with an optional start time and speaker.
+CREATE TABLE event_program (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  event_id INT NOT NULL,
+  position INT NOT NULL DEFAULT 0,
+  start_time TIME NULL,
+  title VARCHAR(140) NOT NULL,
+  speaker VARCHAR(100) NULL,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
+);
+
 CREATE TABLE rsvps (
   event_id INT NOT NULL,
   user_id INT NOT NULL,
@@ -137,11 +149,11 @@ CREATE TABLE notifications (
 SET @pw = 'a9c1a6082291cf408adc66b880923436:ff2be14f0540b28364aec817305b30ef9192d74778c1f0f804155d481bee0f093641982d10375967c9d4b092b7be2961d0b084fbb5dd4bdd90287ab314a2918f';
 
 -- organizations (ids 1..4 in this order). Eligibility 'International' = open to any department.
-INSERT INTO organizations (id, name, description, category, tags, eligibility, color, logo_text, logo_style, meeting_schedule, satisfaction) VALUES
-(1, 'F1 Stackmind', 'Build fast, think strategically, and turn ambitious ideas into working products.', 'Technology', 'Innovation,Technology', 'College of Engineering',       'yellow', 'F1', 'tile',  'Every Wednesday · 5:30 PM', 4.5),
-(2, 'CITEMAS',      'Bring stories to life through animation, motion, and collaborative visual projects.', 'Creative',   'Animation,Creative',    'College of Arts & Sciences',   'teal',   'CT', 'navy',  'Every Tuesday · 4:00 PM',   4.5),
+INSERT INTO organizations (id, name, description, category, tags, eligibility, color, logo_img, logo_style, meeting_schedule, satisfaction) VALUES
+(1, 'F1 Stackmind', 'Build fast, think strategically, and turn ambitious ideas into working products.', 'Technology', 'Innovation,Technology', 'College of Engineering',       'yellow', '/pic/org-logo/f1stackmind.jpg', 'tile',  'Every Wednesday · 5:30 PM', 4.5),
+(2, 'CITEMAS',      'Bring stories to life through animation, motion, and collaborative visual projects.', 'Creative',   'Animation,Creative',    'College of Arts & Sciences',   'teal',   '/pic/org-logo/citemas.png', 'navy',  'Every Tuesday · 4:00 PM',   4.5),
 (3, 'UIPC',         'A welcoming community for every kind of coder, from first program to full stack.',    'Technology', 'All code,Community',    'International',                'lime',   '</>','cream', 'Every Thursday · 6:00 PM',  4.8),
-(4, 'Xcite',        'Move with confidence, learn new styles, and perform with the campus dance community.','Creative',   'Dance,Performance',     'International',                'lilac',  'XC', 'dark',  'Every Friday · 5:00 PM',    4.5);
+(4, 'Xcite',        'Move with confidence, learn new styles, and perform with the campus dance community.','Creative',   'Dance,Performance',     'International',                'lilac',  '/pic/org-logo/Xcite.jpg', 'dark',  'Every Friday · 5:00 PM',    4.5);
 
 -- default officer roles for every organization
 INSERT INTO org_roles (org_id, role_title, precedence, is_officer)
@@ -198,7 +210,11 @@ INSERT INTO users (id, full_name, email, password_hash, role, program, year_leve
 (37, 'Gia Okafor',    'gia.okafor@north.edu',   @pw, 'student', 'Undeclared',          3, NULL),
 (38, 'Hugo Okafor',   'hugo.okafor@north.edu',  @pw, 'student', 'Undeclared',          4, NULL),
 (39, 'Iris Okafor',   'iris.okafor@north.edu',  @pw, 'student', 'Undeclared',          1, NULL),
-(40, 'Jules Okafor',  'jules.okafor@north.edu', @pw, 'student', 'Undeclared',          2, NULL);
+(40, 'Jules Okafor',  'jules.okafor@north.edu', @pw, 'student', 'Undeclared',          2, NULL),
+-- advisers for the other organizations (UIPC's adviser is user 2)
+(41, 'Dana Reyes',    'admin@f1stackmind.edu',  @pw, 'adviser', 'Faculty Advisor',     1, 1),
+(42, 'Sam Torres',    'admin@citemas.edu',      @pw, 'adviser', 'Faculty Advisor',     1, 2),
+(43, 'Kai Mendoza',   'admin@xcite.edu',        @pw, 'adviser', 'Faculty Advisor',     1, 4);
 
 -- hobbies for the demo student
 UPDATE users SET hobbies = 'Dancing, Animation, Chess' WHERE id = 1;
@@ -270,6 +286,24 @@ INSERT INTO events (id, org_id, title, event_date, event_time, location, status,
 (4, 4, 'Open Floor Workshop',  DATE_ADD(CURDATE(), INTERVAL 5 DAY), '17:00:00', 'Gym Hall',       'published', 'Learn a new style and perform at the end.'),
 (5, 2, 'Animation Jam',        DATE_ADD(CURDATE(), INTERVAL 6 DAY), '16:00:00', 'Media Room',     'published', 'Make a 10-second loop in one afternoon.');
 
+-- event program (event_id, position, start_time, title, speaker)
+INSERT INTO event_program (event_id, position, start_time, title, speaker) VALUES
+(1, 0, '09:00:00', 'Registration and team forming',       NULL),
+(1, 1, '09:30:00', 'Opening keynote: shipping fast',      'Dana Reyes'),
+(1, 2, '10:00:00', 'Hacking begins',                      NULL),
+(1, 3, '12:00:00', 'Mentor office hours',                 'Theo Kim'),
+(1, 4, '17:00:00', 'Demos and judging',                   'Dana Reyes'),
+(2, 0, '14:00:00', 'Welcome and ground rules',            'Morgan Liu'),
+(2, 1, '14:15:00', 'Live debugging: reading stack traces','Eli Parker'),
+(2, 2, '15:00:00', 'Bring-your-own-bug clinic',           NULL),
+(2, 3, '16:30:00', 'Wrap-up and takeaways',               'Alex Rivera'),
+(4, 0, '17:00:00', 'Warm-up',                             NULL),
+(4, 1, '17:20:00', 'Learn the routine',                   'Kai Mendoza'),
+(4, 2, '18:15:00', 'Open floor performance',              NULL),
+(5, 0, '16:00:00', 'Theme reveal',                        'Sam Torres'),
+(5, 1, '16:15:00', 'Animate!',                            NULL),
+(5, 2, '18:00:00', 'Screening and feedback',              'Sam Torres');
+  
 -- rsvps: 12 students on Debugging (event 2)
 INSERT INTO rsvps (event_id, user_id) VALUES
 (2, 11), (2, 12), (2, 13), (2, 14), (2, 15), (2, 16),

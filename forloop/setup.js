@@ -14,7 +14,7 @@ CREATE TABLE organizations (
   tags VARCHAR(160) NOT NULL DEFAULT '',
   eligibility VARCHAR(100) NOT NULL DEFAULT 'International',
   color ENUM('yellow','teal','lime','lilac') NOT NULL DEFAULT 'teal',
-  logo_text VARCHAR(4) NOT NULL DEFAULT 'OR',
+  logo_img VARCHAR(120) NOT NULL DEFAULT 'OR',
   logo_style ENUM('tile','navy','cream','dark') NOT NULL DEFAULT 'dark',
   meeting_schedule VARCHAR(120) NOT NULL DEFAULT 'To be announced',
   satisfaction DECIMAL(2,1) NOT NULL DEFAULT 4.5,
@@ -43,6 +43,7 @@ CREATE TABLE users (
   college VARCHAR(100) NULL,
   bio VARCHAR(300) NULL,
   hobbies VARCHAR(300) NULL,
+  avatar VARCHAR(120) NULL,
   profile_complete TINYINT(1) NOT NULL DEFAULT 0,
   org_id INT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -82,6 +83,16 @@ CREATE TABLE events (
   description TEXT,
   status ENUM('draft','published') NOT NULL DEFAULT 'draft',
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+);
+/* Running order of an event: segments with an optional start time and speaker. */
+CREATE TABLE event_program (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  event_id INT NOT NULL,
+  position INT NOT NULL DEFAULT 0,
+  start_time TIME NULL,
+  title VARCHAR(140) NOT NULL,
+  speaker VARCHAR(100) NULL,
+  FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 CREATE TABLE rsvps (
   event_id INT NOT NULL,
@@ -136,6 +147,7 @@ const ORGANIZATIONS = [
     color: 'yellow',
     logo: 'F1',
     style: 'tile',
+    img: '/pic/org-logo/f1stackmind.jpg',
     schedule: 'Every Wednesday · 5:30 PM',
     eligibility: 'College of Engineering',
   },
@@ -148,6 +160,7 @@ const ORGANIZATIONS = [
     color: 'teal',
     logo: 'CT',
     style: 'navy',
+    img: '/pic/org-logo/citemas.png',
     schedule: 'Every Tuesday · 4:00 PM',
     eligibility: 'College of Arts & Sciences',
   },
@@ -173,6 +186,7 @@ const ORGANIZATIONS = [
     color: 'lilac',
     logo: 'XC',
     style: 'dark',
+    img: '/pic/org-logo/Xcite.jpg',
     schedule: 'Every Friday · 5:00 PM',
     eligibility: 'International',
   },
@@ -218,7 +232,7 @@ function seed(done) {
 
   function addOrg(o) {
     queue(
-      'INSERT INTO organizations (name,description,category,tags,eligibility,color,logo_text,logo_style,meeting_schedule,satisfaction) VALUES (?,?,?,?,?,?,?,?,?,?)',
+      'INSERT INTO organizations (name,description,category,tags,eligibility,color,logo_img,logo_style,meeting_schedule,satisfaction) VALUES (?,?,?,?,?,?,?,?,?,?)',
       [
         o.name,
         o.description,
@@ -226,7 +240,7 @@ function seed(done) {
         o.tags,
         o.eligibility,
         o.color,
-        o.logo,
+        o.img || o.logo,
         o.style,
         o.schedule,
         o.satisfaction || 4.5,
@@ -287,6 +301,16 @@ function seed(done) {
     );
   }
 
+  /* items: [start time or null, segment title, speaker or null], in running order */
+  function addProgram(eventKey, items) {
+    items.forEach(([start, title, speaker], position) => {
+      queue(
+        'INSERT INTO event_program (event_id,position,start_time,title,speaker) VALUES (?,?,?,?,?)',
+        () => [ids[eventKey], position, start, title, speaker],
+      );
+    });
+  }
+
   function addNotification(userKey, message, isRead) {
     queue('INSERT INTO notifications (user_id,message,is_read) VALUES (?,?,?)', () => [
       ids[userKey],
@@ -308,6 +332,9 @@ function seed(done) {
   /* ----- Main demo accounts ----- */
   addUser('maya', 'Maya Alvarez', 'maya@north.edu', 'BS Computer Science', 2);
   addUser('alex', 'Alex Rivera', 'admin@codecraft.edu', 'Faculty Advisor', 1, 'adviser', 'UIPC');
+  addUser('dana', 'Dana Reyes', 'admin@f1stackmind.edu', 'Faculty Advisor', 1, 'adviser', 'F1');
+  addUser('sam', 'Sam Torres', 'admin@citemas.edu', 'Faculty Advisor', 1, 'adviser', 'CITEMAS');
+  addUser('kai', 'Kai Mendoza', 'admin@xcite.edu', 'Faculty Advisor', 1, 'adviser', 'Xcite');
 
   /* ----- UIPC officers and early members ----- */
   const core = [
@@ -465,6 +492,29 @@ function seed(done) {
     'published',
     'Make a 10-second loop in one afternoon.',
   );
+  addProgram('hackathon', [
+    ['09:00', 'Registration and team forming', null],
+    ['09:30', 'Opening keynote: shipping fast', 'Dana Reyes'],
+    ['10:00', 'Hacking begins', null],
+    ['12:00', 'Mentor office hours', 'Theo Kim'],
+    ['17:00', 'Demos and judging', 'Dana Reyes'],
+  ]);
+  addProgram('debugging', [
+    ['14:00', 'Welcome and ground rules', 'Morgan Liu'],
+    ['14:15', 'Live debugging: reading stack traces', 'Eli Parker'],
+    ['15:00', 'Bring-your-own-bug clinic', null],
+    ['16:30', 'Wrap-up and takeaways', 'Alex Rivera'],
+  ]);
+  addProgram('workshop', [
+    ['17:00', 'Warm-up', null],
+    ['17:20', 'Learn the routine', 'Kai Mendoza'],
+    ['18:15', 'Open floor performance', null],
+  ]);
+  addProgram('jam', [
+    ['16:00', 'Theme reveal', 'Sam Torres'],
+    ['16:15', 'Animate!', null],
+    ['18:00', 'Screening and feedback', 'Sam Torres'],
+  ]);
   for (const key of fillerKeys.slice(0, 12)) {
     queue('INSERT INTO rsvps (event_id,user_id) VALUES (?,?)', () => [ids.debugging, ids[key]]);
   }

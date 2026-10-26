@@ -21,6 +21,7 @@
         <h3><%= e.title %></h3>
         <p class="meta"><%- icon('clock', 15) %> <%= fmtTime(e.event_time) %> · <%= e.location %></p>
         <% if (e.description) { %><p class="desc"><%= e.description %></p><% } %>
+        <%- include('../shared/event-program', { e: e }) %>
         <form method="post" action="/nonmember/events/<%= e.id %>/rsvp">
           <% if (e.joined) { %>
             <button class="btn outline block joined" type="submit"><%- icon('check', 18) %> You’re going · Cancel</button>

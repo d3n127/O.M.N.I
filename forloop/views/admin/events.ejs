@@ -16,12 +16,13 @@
       <p class="eyebrow"><%= e.status === 'published' ? 'Published' : 'Draft' %></p>
       <h3><%= e.title %></h3>
       <small><%= fmtTime(e.event_time) %> · <%= e.location %></small>
+      <% if (e.program.length) { %><small class="prog-note"><%= e.program.length %> program item<%= e.program.length == 1 ? '' : 's' %><%= e.speakers.length ? ' · ' + e.speakers.length + ' speaker' + (e.speakers.length == 1 ? '' : 's') + ': ' + e.speakers.join(', ') : '' %></small><% } %>
     </div>
     <div class="rsvp"><strong><%= e.status === 'published' ? e.rsvps : '–' %></strong><small>RSVPs</small></div>
     <button class="btn outline small" data-event-edit
       data-id="<%= e.id %>" data-title="<%= e.title %>" data-date="<%= e.event_date.slice(0, 10) %>"
       data-time="<%= e.event_time.slice(0, 5) %>" data-location="<%= e.location %>"
-      data-desc="<%= e.description || '' %>" data-status="<%= e.status %>">Manage <%- icon('arrow', 16) %></button>
+      data-desc="<%= e.description || '' %>" data-program="<%= e.programText %>" data-status="<%= e.status %>">Manage <%- icon('arrow', 16) %></button>
   </div>
 <% }) %>
 
@@ -41,6 +42,9 @@
       <input id="ev_loc" name="location" placeholder="e.g. Innovation Lab">
       <label for="ev_desc">Description</label>
       <textarea id="ev_desc" name="description" rows="3" placeholder="What should members expect?"></textarea>
+      <label for="ev_program">Speakers &amp; program <span class="opt">(optional)</span></label>
+      <textarea id="ev_program" name="program" rows="5" placeholder="One line per segment:&#10;09:00 | Registration&#10;09:30 | Opening keynote | Dana Reyes&#10;12:00 | Lunch"></textarea>
+      <small class="hint">Format: <b>time | segment | speaker</b>. Time and speaker are optional. Speakers are listed automatically from the program.</small>
       <label for="ev_status">Status</label>
       <select id="ev_status" name="status"><option value="published">Published — members can see and join</option><option value="draft">Draft — only you can see it</option></select>
       <button class="btn block" type="submit">Save event <%- icon('arrow', 18) %></button>

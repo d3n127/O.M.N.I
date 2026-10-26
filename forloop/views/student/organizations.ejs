@@ -8,7 +8,7 @@
 <% } %>
 <% mine.forEach(function (o) { %>
   <section class="mine c-<%= o.color %>">
-    <span class="logo-badge big lb-<%= o.logo_style %>"><%= o.logo_text %></span>
+    <span class="logo-badge big lb-<%= o.logo_style %>"><% if (o.logo_img.charAt(0) === '/') { %><img src="<%= o.logo_img %>" alt="" /><% } else { %><%= o.logo_img %><% } %></span>
     <div>
       <p class="eyebrow">Active member · <%= o.role_title %></p>
       <h2><%= o.name %></h2>

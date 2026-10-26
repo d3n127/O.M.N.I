@@ -4,6 +4,17 @@
 <h1 class="page-title">Settings</h1>
 <p class="lead">Manage your personal details, security and appearance. <a class="underline" href="/profile">View profile</a></p>
 
+<div class="card pf-card pf-photo">
+  <span class="avatar big" id="avatarPreview"><%- avatarInner(me.avatar, u.full_name) %></span>
+  <div>
+    <h2>Profile picture</h2>
+    <p class="muted">JPG, PNG or WebP, up to 2 MB.</p>
+    <label class="btn upload-btn">Upload photo
+      <input type="file" accept="image/jpeg,image/png,image/webp" data-upload="/upload/avatar" data-preview="#avatarPreview" hidden>
+    </label>
+  </div>
+</div>
+
 <div class="pf-grid">
   <form class="card pf-card" method="post" action="/profile">
     <h2>Edit profile</h2>

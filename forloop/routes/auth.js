@@ -80,7 +80,7 @@ function redirectHome(user, res, next) {
 
 /* What we keep in the session about a user row. */
 function sessionUser(row) {
-  return { id: row.id, name: row.full_name, role: row.role, org_id: row.org_id };
+  return { id: row.id, name: row.full_name, role: row.role, org_id: row.org_id, avatar: row.avatar || null };
 }
 
 /* ---------- Guards ---------- */
@@ -247,7 +247,7 @@ function validateRegistration({ role, name, email, password, orgName }, done) {
 function createOrganization(name, done) {
   const color = ORG_COLORS[Math.floor(Math.random() * ORG_COLORS.length)];
   db.query(
-    'INSERT INTO organizations (name, description, category, tags, color, logo_text, logo_style) VALUES (?,?,?,?,?,?,?)',
+    'INSERT INTO organizations (name, description, category, tags, color, logo_img, logo_style) VALUES (?,?,?,?,?,?,?)',
     [
       name,
       'Tell students what your community is about.',

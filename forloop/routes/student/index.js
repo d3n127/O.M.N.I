@@ -32,7 +32,7 @@ function countPending(uid, done) {
 function getApplications(uid, limit, done) {
   db.query(
     `
-    SELECT a.*, o.name AS org_name, o.logo_text, o.color
+    SELECT a.*, o.name AS org_name, o.logo_img, o.color
     FROM applications a JOIN organizations o ON o.id = a.org_id
     WHERE a.user_id = ? ORDER BY a.created_at DESC, a.id DESC ${limit ? 'LIMIT ' + Number(limit) : ''}`,
     [uid],

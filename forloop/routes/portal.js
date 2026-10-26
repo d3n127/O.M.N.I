@@ -6,6 +6,7 @@
 const db = require('../conn');
 const { text, parallel } = require('../utils');
 const { applyToOrg } = require('./apply');
+const { attachProgram } = require('./program');
 
 /* SQL condition: events students are allowed to see. */
 const UPCOMING = "e.status = 'published' AND e.event_date >= CURDATE()";
@@ -140,11 +141,16 @@ function addSharedPages(router, { view, base }) {
         if (err) {
           return next(err);
         }
-        res.render(`${view}/events`, {
-          title: 'Events',
-          active: 'events',
-          events: results.events,
-          filterOrg: results.filterOrg,
+        attachProgram(results.events, (err) => {
+          if (err) {
+            return next(err);
+          }
+          res.render(`${view}/events`, {
+            title: 'Events',
+            active: 'events',
+            events: results.events,
+            filterOrg: results.filterOrg,
+          });
         });
       },
     );

@@ -57,6 +57,13 @@
     });
   });
 
+  /* Show the shortcut hint that matches the platform */
+  if (/Mac|iPhone|iPad/.test(navigator.platform)) {
+    $$('[data-shortcut]').forEach(function (k) {
+      k.textContent = '⌘K';
+    });
+  }
+
   /* Ctrl/Cmd+K focuses search, Esc closes modals */
   document.addEventListener('keydown', function (e) {
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -139,6 +146,30 @@
   document.addEventListener('submit', function (e) {
     var msg = e.target.dataset && e.target.dataset.confirm;
     if (msg && !window.confirm(msg)) e.preventDefault();
+  });
+
+  /* Image uploads: <input type="file" data-upload="/url" data-preview="#target"> */
+  document.addEventListener('change', function (e) {
+    var input = e.target;
+    var url = input.dataset && input.dataset.upload;
+    var file = url && input.files && input.files[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) return window.alert('That image is larger than 2 MB.');
+
+    fetch(url, { method: 'POST', headers: { 'Content-Type': file.type }, body: file })
+      .then(function (r) {
+        return r.json();
+      })
+      .then(function (data) {
+        if (!data.ok) return window.alert(data.message);
+        var target = $(input.dataset.preview);
+        if (target) target.innerHTML = '<img src="' + data.url + '" alt="">';
+        window.location.reload();
+      })
+      .catch(function () {
+        window.alert('Upload failed. Try again.');
+      });
+    input.value = '';
   });
 
   /* Toast */

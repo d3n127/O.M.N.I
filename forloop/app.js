@@ -27,7 +27,7 @@ function loadUser(req, res, next) {
     return next();
   }
 
-  db.query('SELECT id, full_name, role, org_id FROM users WHERE id = ?', [saved.id], (err, rows) => {
+  db.query('SELECT id, full_name, role, org_id, avatar FROM users WHERE id = ?', [saved.id], (err, rows) => {
     if (err) {
       return next(err);
     }
@@ -126,6 +126,7 @@ app.use(loadPageValues);
 /* ---------- Routes ---------- */
 app.use('/', require('./routes/auth'));
 app.use('/', require('./routes/profile'));
+app.use('/', require('./routes/uploads'));
 app.use('/student', require('./routes/student'));
 app.use('/nonmember', require('./routes/nonmember'));
 app.use('/admin', require('./routes/admin'));

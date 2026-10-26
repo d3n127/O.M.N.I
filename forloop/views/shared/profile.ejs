@@ -5,7 +5,7 @@
 <p class="lead">Your campus identity — how other students see you.</p>
 
 <div class="pf-hero card">
-  <span class="avatar big"><%= initials(u.full_name) %></span>
+  <span class="avatar big"><%- avatarInner(me.avatar, u.full_name) %></span>
   <div class="pf-id">
     <h2><%= u.full_name %></h2>
     <p class="muted"><%= u.email %></p>

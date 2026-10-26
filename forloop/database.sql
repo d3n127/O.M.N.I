@@ -4,6 +4,9 @@
 -- SQL equivalent of `npm run setup` (setup.js). Import via phpMyAdmin:
 --   Import this file, or from a shell:  mysql -u root -p < database.sql
 --
+-- This is the single source of truth for the schema: every column, key and
+-- seed row that used to live in the migrate-*.js scripts is included below.
+--
 -- WARNING: drops and recreates the database `fourloop_db` (same as npm run setup).
 -- All demo accounts use the password "password" (one shared scrypt hash, exactly
 -- like setup.js). Demo dates are relative to the import day (CURDATE()/NOW()),
@@ -15,7 +18,7 @@ CREATE DATABASE `fourloop_db` CHARACTER SET utf8mb4;
 USE `fourloop_db`;
 
 -- ----------------------------------------------------------------------------
--- Tables (baseline spec §4)
+-- Tables
 -- ----------------------------------------------------------------------------
 
 CREATE TABLE organizations (
@@ -31,6 +34,17 @@ CREATE TABLE organizations (
   meeting_schedule VARCHAR(120) NOT NULL DEFAULT 'To be announced',
   satisfaction DECIMAL(2,1) NOT NULL DEFAULT 4.5,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Per-organization officer roles. Lower precedence = higher rank.
+CREATE TABLE org_roles (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  org_id INT NOT NULL,
+  role_title VARCHAR(40) NOT NULL,
+  precedence INT NOT NULL DEFAULT 0,
+  is_officer TINYINT(1) NOT NULL DEFAULT 1,
+  UNIQUE KEY uq_org_role (org_id, role_title),
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
 CREATE TABLE users (
@@ -122,26 +136,39 @@ CREATE TABLE notifications (
 
 SET @pw = 'a9c1a6082291cf408adc66b880923436:ff2be14f0540b28364aec817305b30ef9192d74778c1f0f804155d481bee0f093641982d10375967c9d4b092b7be2961d0b084fbb5dd4bdd90287ab314a2918f';
 
--- organizations (ids 1..4 in this order)
-INSERT INTO organizations (id, name, description, category, tags, color, logo_text, logo_style, meeting_schedule) VALUES
-(1, 'F1 Stackmind', 'Build fast, think strategically, and turn ambitious ideas into working products.', 'Technology', 'Innovation,Technology', 'yellow', 'F1', 'tile', 'Every Wednesday · 5:30 PM'),
-(2, 'CITEMAS', 'Bring stories to life through animation, motion, and collaborative visual projects.', 'Creative', 'Animation,Creative', 'teal', 'CT', 'navy', 'Every Tuesday · 4:00 PM'),
-(3, 'UIPC', 'A welcoming community for every kind of coder, from first program to full stack.', 'Technology', 'All code,Community', 'lime', '</>', 'cream', 'Every Thursday · 6:00 PM'),
-(4, 'Xcite', 'Move with confidence, learn new styles, and perform with the campus dance community.', 'Creative', 'Dance,Performance', 'lilac', 'XC', 'dark', 'Every Friday · 5:00 PM');
-UPDATE organizations SET satisfaction = 4.8 WHERE id = 3;
+-- organizations (ids 1..4 in this order). Eligibility 'International' = open to any department.
+INSERT INTO organizations (id, name, description, category, tags, eligibility, color, logo_text, logo_style, meeting_schedule, satisfaction) VALUES
+(1, 'F1 Stackmind', 'Build fast, think strategically, and turn ambitious ideas into working products.', 'Technology', 'Innovation,Technology', 'College of Engineering',       'yellow', 'F1', 'tile',  'Every Wednesday · 5:30 PM', 4.5),
+(2, 'CITEMAS',      'Bring stories to life through animation, motion, and collaborative visual projects.', 'Creative',   'Animation,Creative',    'College of Arts & Sciences',   'teal',   'CT', 'navy',  'Every Tuesday · 4:00 PM',   4.5),
+(3, 'UIPC',         'A welcoming community for every kind of coder, from first program to full stack.',    'Technology', 'All code,Community',    'International',                'lime',   '</>','cream', 'Every Thursday · 6:00 PM',  4.8),
+(4, 'Xcite',        'Move with confidence, learn new styles, and perform with the campus dance community.','Creative',   'Dance,Performance',     'International',                'lilac',  'XC', 'dark',  'Every Friday · 5:00 PM',    4.5);
+
+-- default officer roles for every organization
+INSERT INTO org_roles (org_id, role_title, precedence, is_officer)
+SELECT o.id, r.role_title, r.precedence, r.is_officer
+FROM organizations o
+CROSS JOIN (
+  SELECT 'President' AS role_title, 1 AS precedence, 1 AS is_officer
+  UNION ALL SELECT 'Vice President', 2, 1
+  UNION ALL SELECT 'Events Lead', 3, 1
+  UNION ALL SELECT 'Treasurer', 4, 1
+  UNION ALL SELECT 'Secretary', 5, 1
+  UNION ALL SELECT 'Member', 6, 0
+) r
+ORDER BY o.id, r.precedence;
 
 -- users (ids 1..40)
 INSERT INTO users (id, full_name, email, password_hash, role, program, year_level, org_id) VALUES
-(1,  'Maya Alvarez',  'maya@north.edu',         @pw, 'student', 'Computer Science',    2, NULL),
+(1,  'Maya Alvarez',  'maya@north.edu',         @pw, 'student', 'BS Computer Science',    2, NULL),
 (2,  'Alex Rivera',   'admin@codecraft.edu',    @pw, 'adviser', 'Faculty Advisor',     1, 3),
-(3,  'Theo Kim',      'theo@north.edu',         @pw, 'student', 'Information Systems', 3, NULL),
-(4,  'Morgan Liu',    'morgan@north.edu',       @pw, 'student', 'Computer Science',    3, NULL),
-(5,  'Eli Parker',    'eli@north.edu',          @pw, 'student', 'Software Engineering',2, NULL),
-(6,  'Ravi Nair',     'ravi@north.edu',         @pw, 'student', 'Computer Science',    2, NULL),
-(7,  'Chloe Martin',  'chloe@north.edu',        @pw, 'student', 'Data Science',        2, NULL),
-(8,  'Jordan Lee',    'jordan@north.edu',       @pw, 'student', 'Computer Science',    2, NULL),
-(9,  'Amara Nwosu',   'amara@north.edu',        @pw, 'student', 'Digital Media',       1, NULL),
-(10, 'Sofia Reyes',   'sofia@north.edu',        @pw, 'student', 'Data Science',        2, NULL),
+(3,  'Theo Kim',      'theo@north.edu',         @pw, 'student', 'BS Information Systems', 3, NULL),
+(4,  'Morgan Liu',    'morgan@north.edu',       @pw, 'student', 'BS Computer Science',    3, NULL),
+(5,  'Eli Parker',    'eli@north.edu',          @pw, 'student', 'BS Software Engineering',2, NULL),
+(6,  'Ravi Nair',     'ravi@north.edu',         @pw, 'student', 'BS Computer Science',    2, NULL),
+(7,  'Chloe Martin',  'chloe@north.edu',        @pw, 'student', 'BS Data Science',        2, NULL),
+(8,  'Jordan Lee',    'jordan@north.edu',       @pw, 'student', 'BS Computer Science',    2, NULL),
+(9,  'Amara Nwosu',   'amara@north.edu',        @pw, 'student', 'BS Information Technology',       1, NULL),
+(10, 'Sofia Reyes',   'sofia@north.edu',        @pw, 'student', 'BS Data Science',        2, NULL),
 (11, 'Ana Santos',    'ana.santos@north.edu',   @pw, 'student', 'Undeclared',          1, NULL),
 (12, 'Ben Santos',    'ben.santos@north.edu',   @pw, 'student', 'Undeclared',          2, NULL),
 (13, 'Cleo Santos',   'cleo.santos@north.edu',  @pw, 'student', 'Undeclared',          3, NULL),
@@ -172,6 +199,9 @@ INSERT INTO users (id, full_name, email, password_hash, role, program, year_leve
 (38, 'Hugo Okafor',   'hugo.okafor@north.edu',  @pw, 'student', 'Undeclared',          4, NULL),
 (39, 'Iris Okafor',   'iris.okafor@north.edu',  @pw, 'student', 'Undeclared',          1, NULL),
 (40, 'Jules Okafor',  'jules.okafor@north.edu', @pw, 'student', 'Undeclared',          2, NULL);
+
+-- hobbies for the demo student
+UPDATE users SET hobbies = 'Dancing, Animation, Chess' WHERE id = 1;
 
 -- memberships: UIPC core team (fixed history dates)
 INSERT INTO memberships (org_id, user_id, role_title, joined_at) VALUES

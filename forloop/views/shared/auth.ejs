@@ -3,7 +3,7 @@
 <%- include('head', { title: isRegister ? 'Create your account' : 'Sign in', bodyClass: 'auth ' + (isRegister && isAdviser ? 't-admin' : 't-student') }) %>
 <div class="auth-decor" aria-hidden="true"><div class="sun-wrap"><i class="orbit o2"></i><i class="orbit o1"></i><i class="halo"></i><i class="sun"></i></div></div>
 
-<!-- Site header for the sign-in / sign-up screen: brand (home), theme toggle, other-mode link. -->
+<!-- Site header -->
 <header class="auth-nav">
   <div class="auth-nav-in">
     <%- include('logo') %>
@@ -28,7 +28,7 @@
 
   <% if (error) { %><p class="form-error show"><%= error %></p><% } %>
 
-  <!-- ONE sign-in for every role: the account row itself carries the role. -->
+  <!-- Sign in -->
   <form method="post" action="/auth/login" id="loginForm" <%= isRegister ? 'hidden' : '' %>>
     <label for="l_email">University email</label>
     <input id="l_email" type="email" name="email" placeholder="you@university.edu" required value="<%= values.email || '' %>" autocomplete="email">
@@ -38,7 +38,7 @@
     <p class="hint">Demo — <%= demo %></p>
   </form>
 
-  <!-- ONE sign-up for every role; the choice below decides which portal you land in. -->
+  <!-- Sign up -->
   <form method="post" action="/auth/register" id="registerForm" <%= isRegister ? '' : 'hidden' %>>
     <label for="r_name">Full name</label>
     <input id="r_name" name="full_name" placeholder="Your full name" required value="<%= values.full_name || '' %>" autocomplete="name">

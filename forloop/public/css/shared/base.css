@@ -1731,3 +1731,182 @@ svg {
 .cal-link:hover {
   color: var(--ink);
 }
+
+/* ---------- Events page: my calendar + open events ---------- */
+.ev-section {
+  margin-top: 36px;
+}
+.ev-section .block-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.ev-section .block-head h2 {
+  margin: 4px 0 0;
+  font-size: 28px;
+}
+.my-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 22px;
+  align-items: start;
+}
+.cal-card {
+  padding: 22px 24px 18px;
+}
+.cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.cal-head h3 {
+  font-size: 22px;
+  margin: 0;
+}
+.rot-l {
+  transform: rotate(90deg);
+}
+.rot-r {
+  transform: rotate(-90deg);
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+.cal-dow {
+  text-align: center;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 4px;
+}
+.cal-day {
+  min-height: 84px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+.cal-day.out {
+  border-color: transparent;
+}
+.cal-day b {
+  font-size: 12px;
+  color: var(--muted);
+}
+.cal-day.today {
+  border-color: var(--yellow);
+  box-shadow: inset 0 0 0 1px var(--yellow);
+}
+.cal-day.today b {
+  color: var(--ink);
+}
+.cal-chip {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: 8px;
+  padding: 3px 7px;
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.cal-chip.going {
+  background: var(--yellow);
+  color: #173d3a;
+}
+.cal-chip.waitlist {
+  background: transparent;
+  border: 1px dashed var(--yellow);
+  color: var(--ink);
+}
+.cal-key {
+  display: flex;
+  gap: 8px;
+  margin: 14px 0 0;
+}
+.cal-key .cal-chip {
+  display: inline-block;
+}
+.my-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.my-ev {
+  display: flex;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 18px 20px;
+  scroll-margin-top: 100px;
+}
+.my-ev .grow {
+  flex: 1;
+  min-width: 0;
+}
+.my-ev h3 {
+  font-size: 19px;
+  margin: 2px 0 4px;
+}
+.my-ev .meta {
+  font-size: 13px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.my-ev-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+.my-ev-actions .cal-link {
+  margin-top: 0;
+}
+.my-ev-actions form {
+  margin: 0;
+}
+.my-ev-actions .link-danger {
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  font: 600 13px 'DM Sans', sans-serif;
+  color: #a33a28;
+}
+[data-theme='dark'] .my-ev-actions .link-danger {
+  color: #f0a897;
+}
+@media (max-width: 1000px) {
+  .my-split {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .cal-day {
+    min-height: 56px;
+    padding: 4px;
+  }
+  .cal-chip {
+    font-size: 10px;
+    padding: 2px 4px;
+  }
+  .ev-section .block-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

@@ -1,0 +1,97 @@
+<%
+  var mine = events.filter(function (e) { return e.my_status; });
+  var isOpen = function (e) { return e.capacity === null || e.capacity === undefined || e.going_count < e.capacity; };
+  /* Not joined yet: events with seats first, full ones (waitlist) after */
+  var open = events.filter(function (e) { return !e.my_status; }).sort(function (a, b) { return (isOpen(b) ? 1 : 0) - (isOpen(a) ? 1 : 0); });
+  var listed = {}; mine.forEach(function (e) { listed[e.id] = true; });
+  var orgQuery = orgId ? '&org=' + orgId : '';
+  var tiles = ['yellow','teal','lime','lilac'];
+%>
+<p class="eyebrow">Campus calendar</p>
+<h1 class="page-title">Events &amp; activities</h1>
+<p class="lead">
+  <% if (filterOrg) { %>Showing activities from <%= filterOrg %>. <a class="underline" href="<%= base %>/events">Show all</a>
+  <% } else { %>Your own calendar first, then everything you can still join.<% } %>
+</p>
+
+<!-- ---------- Section 1: my calendar ---------- -->
+<section class="ev-section" id="my-events">
+  <div class="block-head"><div><p class="eyebrow">Events you joined</p><h2>My calendar</h2></div>
+    <% if (mine.some(function (e) { return e.my_status === 'going'; })) { %>
+      <a class="btn outline small" href="<%= base %>/events/calendar.ics"><%- icon('calendar', 16) %> Add all to my calendar app</a>
+    <% } %>
+  </div>
+
+  <div class="my-split">
+    <div class="card cal-card">
+      <div class="cal-head">
+        <a class="round" href="<%= base %>/events?month=<%= calendar.prev %><%= orgQuery %>" aria-label="Previous month"><%- icon('chevron', 16, 'rot-l') %></a>
+        <h3><%= calendar.label %></h3>
+        <a class="round" href="<%= base %>/events?month=<%= calendar.next %><%= orgQuery %>" aria-label="Next month"><%- icon('chevron', 16, 'rot-r') %></a>
+      </div>
+      <div class="cal-grid" role="grid">
+        <% ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(function (d) { %><span class="cal-dow"><%= d %></span><% }) %>
+        <% calendar.weeks.forEach(function (week) { week.forEach(function (c) { %>
+          <% if (!c) { %><span class="cal-day out"></span><% } else { %>
+            <div class="cal-day <%= c.today ? 'today' : '' %>">
+              <b><%= c.day %></b>
+              <% c.events.forEach(function (e) { %>
+                <% if (listed[e.id]) { %><a class="cal-chip <%= e.my_status %>" href="#my-event-<%= e.id %>" title="<%= e.title %> · <%= fmtTime(e.event_time) %>"><%= e.title %></a>
+                <% } else { %><span class="cal-chip <%= e.my_status %>" title="<%= e.title %> · <%= fmtTime(e.event_time) %>"><%= e.title %></span><% } %>
+              <% }) %>
+            </div>
+          <% } %>
+        <% }) }) %>
+      </div>
+      <p class="cal-key"><span class="cal-chip going">Going</span> <span class="cal-chip waitlist">Waitlist</span></p>
+    </div>
+
+    <div class="my-list">
+      <% if (!mine.length) { %>
+        <div class="card empty-card"><h3>Nothing on your calendar yet.</h3><p>Join an event below and it will show up here.</p></div>
+      <% } %>
+      <% mine.forEach(function (e) { %>
+        <article class="my-ev" id="my-event-<%= e.id %>">
+          <span class="date-tile <%= tiles[e.id % 4] %>"><small><%= fmtMon(e.event_date) %></small><b><%= fmtDay(e.event_date) %></b></span>
+          <div class="grow">
+            <p class="eyebrow"><%= e.org_name %> · <%= e.my_status === 'going' ? 'You’re going' : 'Waitlist #' + e.wait_position %></p>
+            <h3><%= e.title %></h3>
+            <p class="meta"><%- icon('clock', 15) %> <%= fmtTime(e.event_time) %> · <%= e.location %></p>
+            <%- include('event-program', { e: e }) %>
+            <div class="my-ev-actions">
+              <a class="cal-link" href="<%= base %>/events/<%= e.id %>/calendar.ics"><%- icon('calendar', 15) %> Add to calendar</a>
+              <form method="post" action="<%= base %>/events/<%= e.id %>/rsvp"><button class="link-danger" type="submit"><%= e.my_status === 'going' ? 'Cancel RSVP' : 'Leave waitlist' %></button></form>
+            </div>
+          </div>
+        </article>
+      <% }) %>
+    </div>
+  </div>
+</section>
+
+<!-- ---------- Section 2: events still open ---------- -->
+<section class="ev-section" id="open-events">
+  <div class="block-head"><div><p class="eyebrow">Not joined yet</p><h2>Open to join</h2></div></div>
+  <% if (!open.length) { %>
+    <div class="card empty-card"><h3><%= mine.length ? 'You’ve joined everything that’s coming up.' : 'No upcoming events.' %></h3><p>When an organization publishes a new event, it will appear here.</p></div>
+  <% } %>
+  <div class="ev-grid">
+    <% open.forEach(function (e, i) { %>
+      <article class="ev-card">
+        <div class="ev-top c-<%= tiles[i % 4] %>">
+          <span class="num"><%= String(i + 1).padStart(2, '0') %></span>
+          <span class="when"><%= fmtMon(e.event_date) %> <%= fmtDay(e.event_date) %></span>
+        </div>
+        <div class="ev-body">
+          <p class="eyebrow"><%= e.org_name %></p>
+          <h3><%= e.title %></h3>
+          <p class="meta"><%- icon('clock', 15) %> <%= fmtTime(e.event_time) %> · <%= e.location %></p>
+          <% if (e.description) { %><p class="desc"><%= e.description %></p><% } %>
+          <%- include('event-program', { e: e }) %>
+          <% if (e.capacity === null || e.capacity === undefined) { %><p class="seats"><%- icon('userplus', 15) %> Open to everyone · no seat limit</p><% } %>
+          <%- include('event-actions', { e: e, base: base }) %>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+</section>

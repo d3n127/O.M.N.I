@@ -4,7 +4,7 @@
  * with its own view folder ("student" / "nonmember") and URL prefix.
  */
 const db = require('../conn');
-const { text, parallel, flash } = require('../utils');
+const { text, parallel, flash, ymd, MON } = require('../utils');
 const { applyToOrg } = require('./apply');
 const { attachProgram } = require('./program');
 const { promoteWaitlist } = require('./rsvp');
@@ -95,6 +95,47 @@ function getAllCategories(done) {
   });
 }
 
+/* The month to show for ?month=YYYY-MM (this month when missing or invalid), with prev/next links. */
+function monthRange(param) {
+  const now = new Date();
+  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(String(param || ''));
+  const year = match ? Number(match[1]) : now.getFullYear();
+  const month = match ? Number(match[2]) - 1 : now.getMonth();
+  const key = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+  return {
+    year,
+    month,
+    first: ymd(new Date(year, month, 1)),
+    last: ymd(new Date(year, month + 1, 0)),
+    label: `${MON[month]} ${year}`,
+    prev: key(new Date(year, month - 1, 1)),
+    next: key(new Date(year, month + 1, 1)),
+  };
+}
+
+/* Weeks (Sunday first) of day cells for the month, each holding the student's events that day. */
+function layoutMonth(range, events) {
+  const today = ymd(new Date());
+  const lead = new Date(range.year, range.month, 1).getDay();
+  const days = new Date(range.year, range.month + 1, 0).getDate();
+  const cells = Array(lead).fill(null);
+
+  for (let day = 1; day <= days; day += 1) {
+    const date = ymd(new Date(range.year, range.month, day));
+    cells.push({ day, date, today: date === today, events: events.filter((e) => e.event_date === date) });
+  }
+  while (cells.length % 7) {
+    cells.push(null);
+  }
+
+  const weeks = [];
+  for (let i = 0; i < cells.length; i += 7) {
+    weeks.push(cells.slice(i, i + 7));
+  }
+  return weeks;
+}
+
 /* Registers Discover, Apply, Events and RSVP on a portal's router. */
 function addSharedPages(router, { view, base }) {
   /* Browse and search organizations */
@@ -137,6 +178,7 @@ function addSharedPages(router, { view, base }) {
   /* Upcoming events, optionally filtered to one organization (?org=ID) */
   function showEvents(req, res, next) {
     const orgId = Number(req.query.org) || null;
+    const range = monthRange(req.query.month);
     const params = [req.session.user.id, req.session.user.id];
     if (orgId) {
       params.push(orgId);
@@ -159,6 +201,17 @@ function addSharedPages(router, { view, base }) {
             cb,
           ),
         filterOrg: (cb) => getFilterName(orgId, cb),
+        /* Only events the student joined (going or waitlisted) go on their calendar */
+        calendarEvents: (cb) =>
+          db.query(
+            `
+            SELECT e.id, e.title, e.event_date, e.event_time, r.status AS my_status
+            FROM rsvps r JOIN events e ON e.id = r.event_id
+            WHERE r.user_id = ? AND e.status = 'published' AND e.event_date BETWEEN ? AND ?
+            ORDER BY e.event_date, e.event_time`,
+            [req.session.user.id, range.first, range.last],
+            cb,
+          ),
       },
       (err, results) => {
         if (err) {
@@ -173,6 +226,8 @@ function addSharedPages(router, { view, base }) {
             active: 'events',
             events: results.events,
             filterOrg: results.filterOrg,
+            calendar: { ...range, weeks: layoutMonth(range, results.calendarEvents) },
+            orgId,
           });
         });
       },

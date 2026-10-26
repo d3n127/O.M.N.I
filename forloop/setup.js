@@ -82,6 +82,9 @@ CREATE TABLE events (
   location VARCHAR(140) NOT NULL DEFAULT 'TBA',
   description TEXT,
   status ENUM('draft','published') NOT NULL DEFAULT 'draft',
+  capacity INT NULL,
+  attendance_taken TINYINT(1) NOT NULL DEFAULT 0,
+  reminder_sent TINYINT(1) NOT NULL DEFAULT 0,
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 /* Running order of an event: segments with an optional start time and speaker. */
@@ -94,10 +97,15 @@ CREATE TABLE event_program (
   speaker VARCHAR(100) NULL,
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 );
+/* seq orders the waitlist; attended is the adviser's check-in. */
 CREATE TABLE rsvps (
   event_id INT NOT NULL,
   user_id INT NOT NULL,
+  seq INT NOT NULL AUTO_INCREMENT,
+  status ENUM('going','waitlist') NOT NULL DEFAULT 'going',
+  attended TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (event_id, user_id),
+  UNIQUE KEY uq_rsvp_seq (seq),
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -115,6 +123,30 @@ CREATE TABLE notifications (
   is_read TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+CREATE TABLE announcements (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  org_id INT NOT NULL,
+  title VARCHAR(140) NOT NULL,
+  body TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+);
+/* Questions an organization asks applicants; answers keep a copy of the question text. */
+CREATE TABLE org_questions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  org_id INT NOT NULL,
+  position INT NOT NULL DEFAULT 0,
+  question VARCHAR(200) NOT NULL,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+);
+CREATE TABLE application_answers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  application_id INT NOT NULL,
+  position INT NOT NULL DEFAULT 0,
+  question VARCHAR(200) NOT NULL,
+  answer TEXT,
+  FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
 );`;
 
 /* ---------- Helpers ---------- */
@@ -518,6 +550,27 @@ function seed(done) {
   for (const key of fillerKeys.slice(0, 12)) {
     queue('INSERT INTO rsvps (event_id,user_id) VALUES (?,?)', () => [ids.debugging, ids[key]]);
   }
+
+  /* Debugging is full (12 of 12) so the waitlist can be tried straight away */
+  queue('UPDATE events SET capacity = 12 WHERE id = ?', () => [ids.debugging]);
+  queue('UPDATE events SET capacity = 40 WHERE id = ?', () => [ids.hackathon]);
+
+  /* ----- Application questions and announcements ----- */
+  ['Why do you want to join UIPC?', 'What is the most interesting thing you have built or learned?'].forEach(
+    (question, position) =>
+      queue('INSERT INTO org_questions (org_id,position,question) VALUES (?,?,?)', () => [
+        ids.UIPC,
+        position,
+        question,
+      ]),
+  );
+  [
+    ['UIPC', 'Welcome to the new semester', 'Meetings are every Thursday at 6:00 PM. Bring a laptop and a friend.'],
+    ['UIPC', 'Debugging night is almost full', 'Only a few seats are left. RSVP early or join the waitlist.'],
+    ['F1', 'Hackathon teams', 'Teams of up to four. You can also form one on the day.'],
+  ].forEach(([orgKey, title, body]) =>
+    queue('INSERT INTO announcements (org_id,title,body) VALUES (?,?,?)', () => [ids[orgKey], title, body]),
+  );
 
   /* ----- Notifications ----- */
   addNotification('maya', 'CITEMAS accepted your application. Welcome aboard!', 0);

@@ -16,7 +16,7 @@
     <button class="org-cta" data-apply
       data-id="<%= o.id %>" data-name="<%= o.name %>" data-desc="<%= o.description %>"
       data-category="<%= o.category %>" data-schedule="<%= o.meeting_schedule %>"
-      data-members="<%= o.member_count %>" data-status="<%= o.is_member ? 'member' : (o.app_status || '') %>">
+      data-members="<%= o.member_count %>" data-questions="<%= JSON.stringify(o.questions || []) %>" data-status="<%= o.is_member ? 'member' : (o.app_status || '') %>">
       View &amp; apply <%- icon('arrow', 18) %>
     </button>
   </div>

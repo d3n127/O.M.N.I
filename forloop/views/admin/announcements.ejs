@@ -1,0 +1,33 @@
+<%- include('partials/top') %>
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Communication</p>
+    <h1 class="page-title">Announcements</h1>
+    <p class="lead">Post an update for every member of <%= org.name %>. They get a notification and see it on their home page.</p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>New announcement</h2>
+  <form method="post" action="/admin/announcements" class="form">
+    <label for="an_title">Title</label>
+    <input id="an_title" name="title" maxlength="140" required placeholder="e.g. Meeting moved to Friday">
+    <label for="an_body">Message <span class="opt">(optional)</span></label>
+    <textarea id="an_body" name="body" rows="4" maxlength="2000" placeholder="Add the details members need."></textarea>
+    <button class="btn" type="submit">Post to members <%- icon('arrow', 18) %></button>
+  </form>
+</div>
+
+<h2 class="dir-heading">Posted</h2>
+<% if (!announcements.length) { %><div class="card empty-card"><h3>No announcements yet.</h3><p>Your first post will appear here.</p></div><% } %>
+<% announcements.forEach(function (a) { %>
+  <div class="app-admin">
+    <div class="who2" style="flex:1">
+      <strong><%= a.title %></strong>
+      <small class="blue">Posted <%= fmtShort(a.created_at) %></small>
+      <% if (a.body) { %><p class="an-body"><%= a.body %></p><% } %>
+    </div>
+    <form method="post" action="/admin/announcements/<%= a.id %>/delete" data-confirm="Delete this announcement?"><button class="btn outline small">Delete</button></form>
+  </div>
+<% }) %>
+<%- include('partials/bottom') %>

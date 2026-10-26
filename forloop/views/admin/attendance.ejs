@@ -1,0 +1,46 @@
+<%- include('partials/top') %>
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Check-in</p>
+    <h1 class="page-title"><%= event.title %></h1>
+    <p class="lead"><%= fmtLong(event.event_date) %> · <%= fmtTime(event.event_time) %> · <%= event.location %><%= event.capacity ? ' · ' + going.length + ' of ' + event.capacity + ' seats taken' : '' %></p>
+  </div>
+  <a class="btn outline" href="/admin/events">Back to events</a>
+</div>
+
+<form method="post" action="/admin/events/<%= event.id %>/attendance">
+  <div class="table card flush">
+    <div class="tr th" style="grid-template-columns: 70px 2fr 1.4fr 1fr"><span>Here</span><span>Student</span><span>Program</span><span>Student ID</span></div>
+    <% if (!going.length) { %><p class="empty pad">Nobody has RSVPed yet.</p><% } %>
+    <% going.forEach(function (p) { %>
+      <div class="tr check-row" style="grid-template-columns: 70px 2fr 1.4fr 1fr">
+        <span><input type="checkbox" name="attended" value="<%= p.user_id %>" aria-label="Here: <%= p.full_name %>" <%= p.attended ? 'checked' : '' %>></span>
+        <span class="who"><i class="av"><%= initials(p.full_name) %></i><strong><%= p.full_name %></strong></span>
+        <span><%= p.program %> · Year <%= p.year_level %></span>
+        <span><%= p.student_id || '—' %></span>
+      </div>
+    <% }) %>
+  </div>
+  <% if (going.length) { %>
+    <div class="form-actions">
+      <button type="button" class="btn outline" data-check-all>Select everyone</button>
+      <button class="btn" type="submit"><%- icon('check', 18) %> Save attendance</button>
+    </div>
+  <% } %>
+</form>
+
+<% if (waitlist.length) { %>
+  <h2 class="dir-heading">Waitlist (<%= waitlist.length %>)</h2>
+  <p class="lead">They move up automatically when a seat opens or you raise the capacity.</p>
+  <div class="table card flush">
+    <% waitlist.forEach(function (p, i) { %>
+      <div class="tr" style="grid-template-columns: 70px 2fr 1.4fr 1fr">
+        <span>#<%= i + 1 %></span>
+        <span class="who"><i class="av"><%= initials(p.full_name) %></i><strong><%= p.full_name %></strong></span>
+        <span><%= p.program %> · Year <%= p.year_level %></span>
+        <span><%= p.student_id || '—' %></span>
+      </div>
+    <% }) %>
+  </div>
+<% } %>
+<%- include('partials/bottom') %>

@@ -1,0 +1,18 @@
+<%- include('partials/top') %>
+<p class="eyebrow">Stay in the loop</p>
+<h1 class="page-title">Announcements</h1>
+<p class="lead">Updates from the organizations you belong to.</p>
+
+<% if (!announcements.length) { %>
+  <div class="card empty-card"><h3>Nothing yet.</h3><p>When your organizations post an announcement, it will show up here.</p></div>
+<% } %>
+<div class="news-grid wide">
+  <% announcements.forEach(function (a) { %>
+    <article class="news c-<%= a.color %>">
+      <p class="eyebrow"><%= a.org_name %> · <%= fmtShort(a.created_at) %></p>
+      <h3><%= a.title %></h3>
+      <% if (a.body) { %><p><%= a.body %></p><% } %>
+    </article>
+  <% }) %>
+</div>
+<%- include('partials/bottom') %>

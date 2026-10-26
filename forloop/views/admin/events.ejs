@@ -18,11 +18,15 @@
       <small><%= fmtTime(e.event_time) %> · <%= e.location %></small>
       <% if (e.program.length) { %><small class="prog-note"><%= e.program.length %> program item<%= e.program.length == 1 ? '' : 's' %><%= e.speakers.length ? ' · ' + e.speakers.length + ' speaker' + (e.speakers.length == 1 ? '' : 's') + ': ' + e.speakers.join(', ') : '' %></small><% } %>
     </div>
-    <div class="rsvp"><strong><%= e.status === 'published' ? e.rsvps : '–' %></strong><small>RSVPs</small></div>
+    <div class="rsvp">
+      <strong><%= e.status === 'published' ? e.rsvps + (e.capacity ? '/' + e.capacity : '') : '–' %></strong><small>RSVPs<%= e.waitlist ? ' · ' + e.waitlist + ' waiting' : '' %></small>
+      <% if (e.status === 'published' && e.attendance_taken) { %><small><%= e.attended %> checked in</small><% } %>
+    </div>
+    <% if (e.status === 'published') { %><a class="btn outline small" href="/admin/events/<%= e.id %>/attendance"><%- icon('check', 16) %> Attendance</a><% } %>
     <button class="btn outline small" data-event-edit
       data-id="<%= e.id %>" data-title="<%= e.title %>" data-date="<%= e.event_date.slice(0, 10) %>"
       data-time="<%= e.event_time.slice(0, 5) %>" data-location="<%= e.location %>"
-      data-desc="<%= e.description || '' %>" data-program="<%= e.programText %>" data-status="<%= e.status %>">Manage <%- icon('arrow', 16) %></button>
+      data-desc="<%= e.description || '' %>" data-program="<%= e.programText %>" data-capacity="<%= e.capacity || '' %>" data-status="<%= e.status %>">Manage <%- icon('arrow', 16) %></button>
   </div>
 <% }) %>
 
@@ -40,6 +44,9 @@
       </div>
       <label for="ev_loc">Location</label>
       <input id="ev_loc" name="location" placeholder="e.g. Innovation Lab">
+      <label for="ev_capacity">Seats <span class="opt">(optional)</span></label>
+      <input id="ev_capacity" type="number" name="capacity" min="1" max="10000" placeholder="Leave empty for no limit">
+      <small class="hint">When every seat is taken, students join a waitlist and move up as people cancel.</small>
       <label for="ev_desc">Description</label>
       <textarea id="ev_desc" name="description" rows="3" placeholder="What should members expect?"></textarea>
       <label for="ev_program">Speakers &amp; program <span class="opt">(optional)</span></label>

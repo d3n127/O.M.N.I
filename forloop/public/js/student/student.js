@@ -59,6 +59,28 @@
     err.hidden = false;
   }
 
+  /* The organization's own questions, one textarea each */
+  function renderQuestions(json) {
+    var box = $('#applyQuestions');
+    box.innerHTML = '';
+    var list = [];
+    try {
+      list = JSON.parse(json || '[]');
+    } catch (x) {}
+    list.forEach(function (q, i) {
+      var label = document.createElement('label');
+      label.textContent = q;
+      label.setAttribute('for', 'applyQ' + i);
+      var area = document.createElement('textarea');
+      area.id = 'applyQ' + i;
+      area.rows = 3;
+      area.maxLength = 500;
+      area.setAttribute('data-answer', '');
+      box.appendChild(label);
+      box.appendChild(area);
+    });
+  }
+
   document.addEventListener('click', function (e) {
     var b = e.target.closest('[data-apply]');
     if (!b) return;
@@ -77,6 +99,7 @@
     });
     err.hidden = true;
     form.reset();
+    renderQuestions(d.questions);
     $('#applyOrg').value = d.id;
     notice.hidden = true;
     form.hidden = false;
@@ -105,12 +128,22 @@
     e.preventDefault();
     var intro = $('#applyIntro').value.trim();
     if (!intro) return showErr('Write a short introduction so the team can get to know you.');
+    var answers = [].map.call(form.querySelectorAll('[data-answer]'), function (a) {
+      return a.value.trim();
+    });
+    if (answers.some(function (a) { return !a; }))
+      return showErr('Answer every question so the team can review you.');
     if (!$('#applyAgree').checked)
       return showErr('Agree to share your student profile to continue.');
     fetch(form.dataset.endpoint || '/student/apply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ org_id: $('#applyOrg').value, intro: intro, agree: true }),
+      body: JSON.stringify({
+        org_id: $('#applyOrg').value,
+        intro: intro,
+        agree: true,
+        answers: answers,
+      }),
     })
       .then(function (r) {
         return r.json().then(function (j) {

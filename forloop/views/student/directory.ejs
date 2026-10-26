@@ -1,0 +1,23 @@
+<%- include('partials/top') %>
+<p class="eyebrow"><%= org.name %></p>
+<h1 class="page-title">Member directory</h1>
+<p class="lead"><a class="underline" href="/student/organizations">My organizations</a> · <%= officers.length + members.length %> people. Only members of <%= org.name %> can see this page.</p>
+
+<% [['Officers', officers], ['Members', members]].forEach(function (group) { if (group[1].length) { %>
+  <h2 class="dir-heading"><%= group[0] %></h2>
+  <div class="people-grid">
+    <% group[1].forEach(function (p) { %>
+      <article class="dir-person">
+        <span class="avatar"><%- avatarInner(p.avatar, p.full_name) %></span>
+        <div>
+          <h3><%= p.full_name %><% if (p.id === meId) { %> <small>(you)</small><% } %></h3>
+          <p class="dir-role"><%= p.role_title %> · since <%= fmtMonthYear(p.joined_at) %></p>
+          <p class="dir-meta"><%= p.program %> · Year <%= p.year_level %></p>
+          <% if (p.bio) { %><p class="dir-bio"><%= p.bio %></p><% } %>
+          <% if (p.hobbies) { %><p class="dir-hobbies"><b>Into:</b> <%= p.hobbies %></p><% } %>
+        </div>
+      </article>
+    <% }) %>
+  </div>
+<% } }) %>
+<%- include('partials/bottom') %>

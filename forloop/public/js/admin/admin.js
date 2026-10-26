@@ -14,6 +14,7 @@
       $('#ev_loc').value = d.location || '';
       $('#ev_desc').value = d.desc || '';
       $('#ev_program').value = d.program || '';
+      $('#ev_capacity').value = d.capacity || '';
       $('#ev_status').value = d.status || 'published';
     };
     var openNew = function () {
@@ -40,6 +41,15 @@
     });
     if (new URLSearchParams(location.search).get('new')) openNew();
   }
+
+  /* Attendance: tick every box */
+  $$('[data-check-all]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      $$('input[name="attended"]').forEach(function (c) {
+        c.checked = true;
+      });
+    });
+  });
 
   /* Live preview */
   $$('[data-bind]').forEach(function (inp) {

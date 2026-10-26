@@ -798,3 +798,92 @@
     white-space: nowrap;
   }
 }
+
+/* ---------- Announcements and member directory ---------- */
+.news-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 18px;
+}
+.news-grid.wide {
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+}
+.news {
+  border-radius: 22px;
+  padding: 24px 26px;
+  color: var(--on-tile);
+}
+.news h3 {
+  font-size: 22px;
+  margin: 8px 0 8px;
+}
+.news p:last-child {
+  font-size: 14px;
+  opacity: 0.85;
+}
+.mine > .mine-actions {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 210px;
+}
+.dir-heading {
+  margin: 34px 0 14px;
+  font-size: 22px;
+}
+.people-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 16px;
+}
+.dir-person {
+  display: flex;
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 20px 22px;
+}
+.dir-person .avatar {
+  flex: none;
+  width: 54px;
+  height: 54px;
+  overflow: hidden;
+}
+.dir-person .avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.dir-person h3 {
+  font-size: 18px;
+  margin: 0;
+}
+.dir-person h3 small {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+}
+.dir-person .dir-role {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--accent);
+  margin: 2px 0;
+}
+.dir-person .dir-meta,
+.dir-person .dir-hobbies {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.dir-person .dir-bio {
+  font-size: 13.5px;
+  margin-top: 8px;
+}
+@media (max-width: 700px) {
+  .mine-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+}

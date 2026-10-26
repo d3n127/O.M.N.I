@@ -6,7 +6,7 @@
     <form class="search side-search" action="/admin/members" method="get"><%- icon('search', 20) %><input name="q" placeholder="Search members…" autocomplete="off"><kbd data-shortcut>Ctrl K</kbd></form>
     <p class="side-label">Organization</p>
     <nav>
-      <% [['overview','/admin','grid','Overview'],['organization','/admin/organization','building','Organization'],['members','/admin/members','userplus','Members'],['officers','/admin/officers','chart','Officers'],['applications','/admin/applications','file','Applications'],['events','/admin/events','calendar','Events'],['reports','/admin/reports','chart','Reports']].forEach(function (n) { %>
+      <% [['overview','/admin','grid','Overview'],['organization','/admin/organization','building','Organization'],['members','/admin/members','userplus','Members'],['officers','/admin/officers','chart','Officers'],['applications','/admin/applications','file','Applications'],['events','/admin/events','calendar','Events'],['announcements','/admin/announcements','spark','Announcements'],['reports','/admin/reports','chart','Reports']].forEach(function (n) { %>
         <a href="<%= n[1] %>" class="<%= locals.active === n[0] ? 'on' : '' %>"><%- icon(n[2], 22) %><span><%= n[3] %></span><% if (n[0] === 'applications' && badge > 0) { %><em class="count"><%= badge %></em><% } %></a>
       <% }) %>
     </nav>

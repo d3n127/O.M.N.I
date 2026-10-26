@@ -1699,3 +1699,35 @@ svg {
   font-weight: 400;
   color: var(--muted);
 }
+
+/* ---------- Event seats, waitlist and calendar link ---------- */
+.seats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.seats.full {
+  color: #a33a28;
+}
+[data-theme='dark'] .seats.full {
+  color: #f0a897;
+}
+.btn.waiting {
+  border-color: var(--yellow);
+}
+.cal-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.cal-link:hover {
+  color: var(--ink);
+}

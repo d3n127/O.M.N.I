@@ -10,6 +10,9 @@ const { MON, DEPT_NAMES, flash, text, cleanEmail, ymd, parallel } = require('../
 const { requireRole } = require('../auth');
 const { UPCOMING } = require('../portal');
 const { parseProgram, programToText, saveProgram, attachProgram } = require('../program');
+const { promoteWaitlist } = require('../rsvp');
+
+const MAX_QUESTIONS = 5;
 
 const router = express.Router();
 
@@ -83,7 +86,7 @@ function countEvents(orgId, extraCondition, done) {
   db.query(
     `
     SELECT COUNT(DISTINCT e.id) AS events, COUNT(r.user_id) AS rsvps
-    FROM events e LEFT JOIN rsvps r ON r.event_id = e.id
+    FROM events e LEFT JOIN rsvps r ON r.event_id = e.id AND r.status = 'going'
     WHERE e.org_id = ? AND e.status = 'published' ${extraCondition}`,
     [orgId],
     (err, rows) => {
@@ -119,6 +122,15 @@ function orgStats(org, done) {
         ),
       upcoming: (cb) => countEvents(org.id, 'AND e.event_date >= CURDATE()', cb),
       allEvents: (cb) => countEvents(org.id, '', cb),
+      checkins: (cb) =>
+        db.query(
+          `
+          SELECT COUNT(*) AS going, COALESCE(SUM(r.attended), 0) AS attended
+          FROM rsvps r JOIN events e ON e.id = r.event_id
+          WHERE e.org_id = ? AND e.status = 'published' AND e.attendance_taken = 1 AND r.status = 'going'`,
+          [org.id],
+          cb,
+        ),
     },
     (err, results) => {
       if (err) {
@@ -132,9 +144,15 @@ function orgStats(org, done) {
       const approved = Number(decisions.approved || 0);
       const decided = approved + Number(decisions.rejected || 0);
 
-      /* Percent of members who RSVPed to the average event */
-      const attendance =
-        allEvents.events && memberCount
+      /*
+       * Once advisers check people in, attendance is the share of RSVPs who showed up.
+       * Until then it is the percent of members who RSVPed to the average event.
+       */
+      const checkins = results.checkins[0];
+      const hasCheckins = Number(checkins.going) > 0;
+      const attendance = hasCheckins
+        ? Math.round((Number(checkins.attended) / Number(checkins.going)) * 100)
+        : allEvents.events && memberCount
           ? Math.min(100, Math.round((allEvents.rsvps / (allEvents.events * memberCount)) * 100))
           : 0;
       /* Percent of decided applications that were approved */
@@ -149,6 +167,7 @@ function orgStats(org, done) {
         upcoming: upcoming.events,
         upcomingRsvps: upcoming.rsvps,
         attendance,
+        attendanceBasis: hasCheckins ? 'checkin' : 'rsvp',
         acceptance,
         score,
       });
@@ -204,7 +223,7 @@ function showOverview(req, res, next) {
       upcoming: (cb) =>
         db.query(
           `
-          SELECT e.*, (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id) AS rsvps
+          SELECT e.*, (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS rsvps
           FROM events e WHERE e.org_id = ? AND ${UPCOMING}
           ORDER BY e.event_date, e.event_time LIMIT 5`,
           [org.id],
@@ -251,7 +270,7 @@ function showOverview(req, res, next) {
         return renderOverview([]);
       }
       db.query(
-        'SELECT u.full_name FROM rsvps r JOIN users u ON u.id = r.user_id WHERE r.event_id = ? LIMIT 3',
+        "SELECT u.full_name FROM rsvps r JOIN users u ON u.id = r.user_id WHERE r.event_id = ? AND r.status = 'going' LIMIT 3",
         [featured.id],
         (err, going) => {
           if (err) {
@@ -579,9 +598,85 @@ function showApplications(req, res, next) {
       if (err) {
         return next(err);
       }
-      res.render('admin/applications', { title: 'Applications', active: 'applications', apps });
+      apps.forEach((a) => {
+        a.answers = [];
+      });
+
+      parallel(
+        {
+          questions: (cb) =>
+            db.query(
+              'SELECT question FROM org_questions WHERE org_id = ? ORDER BY position, id',
+              [res.locals.org.id],
+              cb,
+            ),
+          answers: (cb) =>
+            apps.length
+              ? db.query(
+                  'SELECT * FROM application_answers WHERE application_id IN (?) ORDER BY position, id',
+                  [apps.map((a) => a.id)],
+                  cb,
+                )
+              : cb(null, []),
+        },
+        (err, results) => {
+          if (err) {
+            return next(err);
+          }
+          results.answers.forEach((row) => {
+            apps.find((a) => a.id === row.application_id).answers.push(row);
+          });
+          res.render('admin/applications', {
+            title: 'Applications',
+            active: 'applications',
+            apps,
+            questions: results.questions.map((q) => q.question),
+            maxQuestions: MAX_QUESTIONS,
+          });
+        },
+      );
     },
   );
+}
+
+/* One question per line, up to MAX_QUESTIONS. Applicants see them in the apply popup. */
+function saveQuestions(req, res, next) {
+  const orgId = res.locals.org.id;
+  const questions = String(req.body.questions || '')
+    .split(/\r?\n/)
+    .map((q) => text(q, 200))
+    .filter(Boolean)
+    .slice(0, MAX_QUESTIONS);
+
+  db.query('DELETE FROM org_questions WHERE org_id = ?', [orgId], (err) => {
+    if (err) {
+      return next(err);
+    }
+
+    function finish() {
+      flash(
+        req,
+        questions.length
+          ? `Saved ${questions.length} application question${questions.length === 1 ? '' : 's'}.`
+          : 'Application questions cleared. Applicants only write an introduction.',
+      );
+      res.redirect('/admin/applications');
+    }
+
+    if (!questions.length) {
+      return finish();
+    }
+    db.query(
+      'INSERT INTO org_questions (org_id, position, question) VALUES ?',
+      [questions.map((q, i) => [orgId, i, q])],
+      (err) => {
+        if (err) {
+          return next(err);
+        }
+        finish();
+      },
+    );
+  });
 }
 
 /* Approve (adds the student as a member) or decline a pending application */
@@ -652,7 +747,10 @@ function reviewApplication(req, res, next) {
 function showEvents(req, res, next) {
   db.query(
     `
-    SELECT e.*, (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id) AS rsvps
+    SELECT e.*,
+      (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS rsvps,
+      (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id AND r.status = 'waitlist') AS waitlist,
+      (SELECT COALESCE(SUM(r.attended), 0) FROM rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS attended
     FROM events e WHERE e.org_id = ? ORDER BY e.event_date, e.event_time`,
     [res.locals.org.id],
     (err, events) => {
@@ -672,6 +770,12 @@ function showEvents(req, res, next) {
   );
 }
 
+/* Seats: a whole number from 1 to 10000, or null for no limit. */
+function readCapacity(value) {
+  const seats = parseInt(value, 10);
+  return seats >= 1 ? Math.min(seats, 10000) : null;
+}
+
 /* Clean the event form. Returns null when title, date or time is missing or malformed. */
 function readEvent(body) {
   const event = {
@@ -682,6 +786,7 @@ function readEvent(body) {
     description: text(body.description),
     status: body.status === 'published' ? 'published' : 'draft',
     program: parseProgram(body.program),
+    capacity: readCapacity(body.capacity),
   };
   const isValid =
     event.title && /^\d{4}-\d{2}-\d{2}$/.test(event.date) && /^\d{2}:\d{2}/.test(event.time);
@@ -705,7 +810,7 @@ function createEvent(req, res, next) {
   }
 
   db.query(
-    'INSERT INTO events (org_id, title, event_date, event_time, location, description, status) VALUES (?,?,?,?,?,?,?)',
+    'INSERT INTO events (org_id, title, event_date, event_time, location, description, status, capacity) VALUES (?,?,?,?,?,?,?,?)',
     [
       res.locals.org.id,
       event.title,
@@ -714,6 +819,7 @@ function createEvent(req, res, next) {
       event.location,
       event.description,
       event.status,
+      event.capacity,
     ],
     (err, result) => {
       if (err) {
@@ -765,14 +871,16 @@ function updateEvent(req, res, next) {
       }
 
       db.query(
-        'UPDATE events SET title = ?, event_date = ?, event_time = ?, location = ?, description = ?, status = ? WHERE id = ?',
+        'UPDATE events SET reminder_sent = IF(event_date = ?, reminder_sent, 0), title = ?, event_date = ?, event_time = ?, location = ?, description = ?, status = ?, capacity = ? WHERE id = ?',
         [
+          event.date,
           event.title,
           event.date,
           event.time,
           event.location,
           event.description,
           event.status,
+          event.capacity,
           req.params.id,
         ],
         (err) => {
@@ -783,15 +891,21 @@ function updateEvent(req, res, next) {
             if (err) {
               return next(err);
             }
-            /* Members are only notified the first time an event is published */
-            if (wasPublished || event.status !== 'published') {
-              return finish();
-            }
-            notifyMembers(res.locals.org, event.title, (err) => {
+            /* A higher capacity may free seats for people on the waitlist */
+            promoteWaitlist(req.params.id, (err) => {
               if (err) {
                 return next(err);
               }
-              finish();
+              /* Members are only notified the first time an event is published */
+              if (wasPublished || event.status !== 'published') {
+                return finish();
+              }
+              notifyMembers(res.locals.org, event.title, (err) => {
+                if (err) {
+                  return next(err);
+                }
+                finish();
+              });
             });
           });
         },
@@ -814,6 +928,147 @@ function deleteEvent(req, res, next) {
   );
 }
 
+/* ---------- Attendance ---------- */
+
+function showAttendance(req, res, next) {
+  db.query(
+    'SELECT * FROM events WHERE id = ? AND org_id = ?',
+    [req.params.id, res.locals.org.id],
+    (err, found) => {
+      if (err) {
+        return next(err);
+      }
+      if (!found.length) {
+        return res.redirect('/admin/events');
+      }
+
+      db.query(
+        `
+        SELECT r.user_id, r.status, r.attended, u.full_name, u.student_id, u.program, u.year_level
+        FROM rsvps r JOIN users u ON u.id = r.user_id
+        WHERE r.event_id = ? ORDER BY r.seq`,
+        [req.params.id],
+        (err, people) => {
+          if (err) {
+            return next(err);
+          }
+          res.render('admin/attendance', {
+            title: 'Attendance',
+            active: 'events',
+            event: found[0],
+            going: people.filter((p) => p.status === 'going'),
+            waitlist: people.filter((p) => p.status === 'waitlist'),
+          });
+        },
+      );
+    },
+  );
+}
+
+/* The ticked boxes are who showed up; everyone else going is marked absent. */
+function saveAttendance(req, res, next) {
+  const eventId = req.params.id;
+  const back = `/admin/events/${eventId}/attendance`;
+  const present = [].concat(req.body.attended || []).map(Number).filter((id) => id > 0);
+
+  db.query(
+    'SELECT id FROM events WHERE id = ? AND org_id = ?',
+    [eventId, res.locals.org.id],
+    (err, found) => {
+      if (err) {
+        return next(err);
+      }
+      if (!found.length) {
+        return res.redirect('/admin/events');
+      }
+
+      db.query(
+        "UPDATE rsvps SET attended = (user_id IN (?)) WHERE event_id = ? AND status = 'going'",
+        [present.length ? present : [0], eventId],
+        (err, result) => {
+          if (err) {
+            return next(err);
+          }
+          db.query('UPDATE events SET attendance_taken = 1 WHERE id = ?', [eventId], (err) => {
+            if (err) {
+              return next(err);
+            }
+            flash(req, `Attendance saved: ${present.length} of ${result.affectedRows} checked in.`);
+            res.redirect(back);
+          });
+        },
+      );
+    },
+  );
+}
+
+/* ---------- Announcements ---------- */
+
+function showAnnouncements(req, res, next) {
+  db.query(
+    'SELECT * FROM announcements WHERE org_id = ? ORDER BY created_at DESC, id DESC',
+    [res.locals.org.id],
+    (err, announcements) => {
+      if (err) {
+        return next(err);
+      }
+      res.render('admin/announcements', {
+        title: 'Announcements',
+        active: 'announcements',
+        announcements,
+      });
+    },
+  );
+}
+
+function createAnnouncement(req, res, next) {
+  const { org } = res.locals;
+  const title = text(req.body.title, 140);
+  const body = text(req.body.body, 2000);
+  if (!title) {
+    flash(req, 'Give the announcement a title.', 'err');
+    return res.redirect('/admin/announcements');
+  }
+
+  db.query(
+    'INSERT INTO announcements (org_id, title, body) VALUES (?,?,?)',
+    [org.id, title, body],
+    (err) => {
+      if (err) {
+        return next(err);
+      }
+      db.query(
+        'INSERT INTO notifications (user_id, message) SELECT user_id, ? FROM memberships WHERE org_id = ?',
+        [`${org.name}: ${title}`.slice(0, 255), org.id],
+        (err, result) => {
+          if (err) {
+            return next(err);
+          }
+          flash(
+            req,
+            `Announcement posted. ${result.affectedRows} member${result.affectedRows === 1 ? ' was' : 's were'} notified.`,
+          );
+          res.redirect('/admin/announcements');
+        },
+      );
+    },
+  );
+}
+
+function deleteAnnouncement(req, res, next) {
+  db.query(
+    'DELETE FROM announcements WHERE id = ? AND org_id = ?',
+    [req.params.id, res.locals.org.id],
+    (err) => {
+      if (err) {
+        return next(err);
+      }
+      flash(req, 'Announcement deleted.');
+      res.redirect('/admin/announcements');
+    },
+  );
+}
+
 /* ---------- Reports ---------- */
 
 function showReports(req, res, next) {
@@ -821,6 +1076,19 @@ function showReports(req, res, next) {
     {
       stats: (cb) => orgStats(res.locals.org, cb),
       months: (cb) => memberGrowth(res.locals.org.id, cb),
+      events: (cb) =>
+        db.query(
+          `
+          SELECT e.id, e.title, e.event_date, e.capacity, e.attendance_taken,
+            (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS going,
+            (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id AND r.status = 'waitlist') AS waitlist,
+            (SELECT COALESCE(SUM(r.attended), 0) FROM rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS attended
+          FROM events e
+          WHERE e.org_id = ? AND e.status = 'published' AND e.event_date <= CURDATE()
+          ORDER BY e.event_date DESC, e.id DESC LIMIT 6`,
+          [res.locals.org.id],
+          cb,
+        ),
     },
     (err, results) => {
       if (err) {
@@ -830,6 +1098,7 @@ function showReports(req, res, next) {
         title: 'Reports',
         active: 'reports',
         stats: results.stats,
+        events: results.events,
         months: results.months,
         max: Math.max(1, ...results.months.map((m) => m.count)),
       });
@@ -860,7 +1129,7 @@ function exportReport(req, res, next) {
         `Pending applications,${stats.pending}`,
         `Upcoming events,${stats.upcoming}`,
         `Application acceptance %,${stats.acceptance}`,
-        `Event attendance %,${stats.attendance}`,
+        `${stats.attendanceBasis === 'checkin' ? 'Event check-in rate' : 'Event RSVP rate'} %,${stats.attendance}`,
         `Member satisfaction,${org.satisfaction}`,
         '',
         'Month,New members',
@@ -888,10 +1157,16 @@ router.post('/members/:mid/remove', removeMember);
 router.get('/officers', showOfficers);
 router.post('/officers', changeOfficers);
 router.get('/applications', showApplications);
+router.post('/applications/questions', saveQuestions);
 router.post('/applications/:id/:action', reviewApplication);
 router.get('/events', showEvents);
 router.post('/events', createEvent);
+router.get('/events/:id/attendance', showAttendance);
+router.post('/events/:id/attendance', saveAttendance);
 router.post('/events/:id', updateEvent);
+router.get('/announcements', showAnnouncements);
+router.post('/announcements', createAnnouncement);
+router.post('/announcements/:id/delete', deleteAnnouncement);
 router.post('/events/:id/delete', deleteEvent);
 router.get('/reports', showReports);
 router.get('/reports/export', exportReport);

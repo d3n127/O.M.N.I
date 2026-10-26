@@ -24,8 +24,27 @@
   </div>
   <div class="side-kpis">
     <div class="kpi"><small>Application acceptance</small><strong><%= stats.acceptance %>%</strong><span>Approved of all decided</span></div>
-    <div class="kpi"><small>Event attendance</small><strong><%= stats.attendance %>%</strong><span>RSVPs per published event</span></div>
+    <div class="kpi"><small><%= stats.attendanceBasis === 'checkin' ? 'Check-in rate' : 'Event attendance' %></small><strong><%= stats.attendance %>%</strong><span><%= stats.attendanceBasis === 'checkin' ? 'Of RSVPs who showed up' : 'RSVPs per published event' %></span></div>
     <div class="kpi"><small>Member satisfaction</small><strong><%= Number(org.satisfaction).toFixed(1) %></strong><span>Out of 5</span></div>
   </div>
+</div>
+
+<div class="card" style="margin-top:24px">
+  <h2>Recent events</h2>
+  <p class="muted">Going, waitlist and check-in for your latest events. Take attendance from the Events page.</p>
+  <% if (!events.length) { %><p class="empty">No past events yet.</p><% } else { %>
+  <div class="table card flush" style="margin-top:14px">
+    <div class="tr th" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr"><span>Event</span><span>Date</span><span>Going</span><span>Waitlist</span><span>Checked in</span></div>
+    <% events.forEach(function (e) { %>
+      <div class="tr" style="grid-template-columns: 2fr 1fr 1fr 1fr 1fr">
+        <span><a class="underline" href="/admin/events/<%= e.id %>/attendance"><%= e.title %></a></span>
+        <span><%= fmtShort(e.event_date) %></span>
+        <span><%= e.going %><%= e.capacity ? ' / ' + e.capacity : '' %></span>
+        <span><%= e.waitlist %></span>
+        <span><%= e.attendance_taken ? e.attended + ' (' + (e.going ? Math.round(e.attended / e.going * 100) : 0) + '%)' : 'Not taken' %></span>
+      </div>
+    <% }) %>
+  </div>
+  <% } %>
 </div>
 <%- include('partials/bottom') %>

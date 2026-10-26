@@ -14,7 +14,10 @@
       <h2><%= o.name %></h2>
       <p>You joined on <%= fmtLong(o.joined_at) %> · <%= o.upcoming %> upcoming <%= o.upcoming == 1 ? 'activity' : 'activities' %></p>
     </div>
-    <a class="btn dark" href="/student/events?org=<%= o.id %>">View activities <%- icon('arrow', 18) %></a>
+    <div class="mine-actions">
+      <a class="btn dark" href="/student/events?org=<%= o.id %>">View activities <%- icon('arrow', 18) %></a>
+      <a class="btn outline" href="/student/organizations/<%= o.id %>/directory"><%- icon('userplus', 18) %> Directory</a>
+    </div>
   </section>
 <% }) %>
 <%- include('partials/bottom') %>

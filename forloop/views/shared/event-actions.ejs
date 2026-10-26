@@ -1,0 +1,22 @@
+<%
+  var capped = e.capacity !== null && e.capacity !== undefined;
+  var seatsLeft = capped ? Math.max(0, e.capacity - e.going_count) : null;
+%>
+<% if (capped) { %>
+  <p class="seats <%= seatsLeft === 0 ? 'full' : '' %>">
+    <%- icon('userplus', 15) %>
+    <% if (seatsLeft === 0) { %>Full · <%= e.going_count %> going<% } else { %><%= seatsLeft %> of <%= e.capacity %> seat<%= seatsLeft == 1 ? '' : 's' %> left<% } %>
+  </p>
+<% } %>
+<form method="post" action="<%= base %>/events/<%= e.id %>/rsvp">
+  <% if (e.my_status === 'going') { %>
+    <button class="btn outline block joined" type="submit"><%- icon('check', 18) %> You’re going · Cancel</button>
+  <% } else if (e.my_status === 'waitlist') { %>
+    <button class="btn outline block waiting" type="submit"><%- icon('clock', 18) %> Waitlist #<%= e.wait_position %> · Leave</button>
+  <% } else if (capped && seatsLeft === 0) { %>
+    <button class="btn outline block" type="submit">Join waitlist <%- icon('arrow', 18) %></button>
+  <% } else { %>
+    <button class="btn outline block" type="submit">Join event <%- icon('arrow', 18) %></button>
+  <% } %>
+</form>
+<a class="cal-link" href="<%= base %>/events/<%= e.id %>/calendar.ics"><%- icon('calendar', 15) %> Add to calendar</a>

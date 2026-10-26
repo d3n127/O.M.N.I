@@ -28,6 +28,24 @@
   </div>
 </section>
 
+<% if (announcements.length) { %>
+<section class="section-block">
+  <div class="block-head">
+    <div><p class="eyebrow">From your organizations</p><h2>Announcements</h2></div>
+    <a class="more" href="/student/announcements">See all <%- icon('arrow', 18) %></a>
+  </div>
+  <div class="news-grid">
+    <% announcements.forEach(function (a) { %>
+      <article class="news c-<%= a.color %>">
+        <p class="eyebrow"><%= a.org_name %> · <%= fmtShort(a.created_at) %></p>
+        <h3><%= a.title %></h3>
+        <% if (a.body) { %><p><%= a.body %></p><% } %>
+      </article>
+    <% }) %>
+  </div>
+</section>
+<% } %>
+
 <section class="two">
   <div class="card">
     <p class="eyebrow">Save the date</p>

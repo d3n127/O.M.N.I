@@ -102,6 +102,9 @@ CREATE TABLE events (
   location VARCHAR(140) NOT NULL DEFAULT 'TBA',
   description TEXT,
   status ENUM('draft','published') NOT NULL DEFAULT 'draft',
+  capacity INT NULL,
+  attendance_taken TINYINT(1) NOT NULL DEFAULT 0,
+  reminder_sent TINYINT(1) NOT NULL DEFAULT 0,
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
 
@@ -116,10 +119,15 @@ CREATE TABLE event_program (
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE
 );
 
+-- `seq` orders the waitlist; `attended` is the adviser's check-in.
 CREATE TABLE rsvps (
   event_id INT NOT NULL,
   user_id INT NOT NULL,
+  seq INT NOT NULL AUTO_INCREMENT,
+  status ENUM('going','waitlist') NOT NULL DEFAULT 'going',
+  attended TINYINT(1) NOT NULL DEFAULT 0,
   PRIMARY KEY (event_id, user_id),
+  UNIQUE KEY uq_rsvp_seq (seq),
   FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -139,6 +147,33 @@ CREATE TABLE notifications (
   is_read TINYINT(1) NOT NULL DEFAULT 0,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE announcements (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  org_id INT NOT NULL,
+  title VARCHAR(140) NOT NULL,
+  body TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+);
+
+-- Questions an organization asks applicants; answers keep a copy of the question text.
+CREATE TABLE org_questions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  org_id INT NOT NULL,
+  position INT NOT NULL DEFAULT 0,
+  question VARCHAR(200) NOT NULL,
+  FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
+);
+
+CREATE TABLE application_answers (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  application_id INT NOT NULL,
+  position INT NOT NULL DEFAULT 0,
+  question VARCHAR(200) NOT NULL,
+  answer TEXT,
+  FOREIGN KEY (application_id) REFERENCES applications(id) ON DELETE CASCADE
 );
 
 -- ----------------------------------------------------------------------------
@@ -304,10 +339,24 @@ INSERT INTO event_program (event_id, position, start_time, title, speaker) VALUE
 (5, 1, '16:15:00', 'Animate!',                            NULL),
 (5, 2, '18:00:00', 'Screening and feedback',              'Sam Torres');
   
+-- capacity: Debugging is full (12 of 12) so the waitlist can be tried straight away
+UPDATE events SET capacity = 12 WHERE id = 2;
+UPDATE events SET capacity = 40 WHERE id = 1;
+
 -- rsvps: 12 students on Debugging (event 2)
 INSERT INTO rsvps (event_id, user_id) VALUES
 (2, 11), (2, 12), (2, 13), (2, 14), (2, 15), (2, 16),
 (2, 17), (2, 18), (2, 19), (2, 20), (2, 21), (2, 22);
+
+-- application questions and announcements
+INSERT INTO org_questions (org_id, position, question) VALUES
+(3, 0, 'Why do you want to join UIPC?'),
+(3, 1, 'What is the most interesting thing you have built or learned?');
+
+INSERT INTO announcements (org_id, title, body) VALUES
+(3, 'Welcome to the new semester',      'Meetings are every Thursday at 6:00 PM. Bring a laptop and a friend.'),
+(3, 'Debugging night is almost full',   'Only a few seats are left. RSVP early or join the waitlist.'),
+(1, 'Hackathon teams',                  'Teams of up to four. You can also form one on the day.');
 
 -- notifications
 INSERT INTO notifications (user_id, message, is_read) VALUES

@@ -19,7 +19,7 @@
     <span class="badge <%= a.status %>"><%= a.status === 'pending' ? 'In review' : a.status === 'approved' ? 'Accepted' : 'Declined' %></span>
     <% if (a.status === 'rejected' && o) { %>
       <button class="btn small" data-apply data-id="<%= o.id %>" data-name="<%= o.name %>" data-desc="<%= o.description %>"
-        data-category="<%= o.category %>" data-schedule="<%= o.meeting_schedule %>" data-members="<%= o.member_count %>" data-status="rejected">Revise &amp; apply</button>
+        data-category="<%= o.category %>" data-schedule="<%= o.meeting_schedule %>" data-members="<%= o.member_count %>" data-questions="<%= JSON.stringify(o.questions || []) %>" data-status="rejected">Revise &amp; apply</button>
     <% } else if (a.status === 'approved') { %>
       <a class="round" href="/student/events?org=<%= a.org_id %>" aria-label="View activities"><%- icon('arrow', 18) %></a>
     <% } else { %>

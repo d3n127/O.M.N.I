@@ -899,3 +899,54 @@ blockquote {
     align-items: stretch;
   }
 }
+
+/* ---------- Attendance, announcements, application questions ---------- */
+.check-row {
+  cursor: pointer;
+}
+.check-row input[type='checkbox'] {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--green);
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 18px;
+}
+.dir-heading {
+  margin: 34px 0 14px;
+  font-size: 22px;
+}
+.an-body {
+  margin: 8px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  white-space: pre-line;
+}
+.q-card {
+  margin-bottom: 22px;
+}
+.q-card .form {
+  margin-top: 12px;
+}
+.answers {
+  flex-basis: 100%;
+  order: 6;
+  margin: 8px 0 0;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.answers dt {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.answers dd {
+  margin: 2px 0 0;
+  font-size: 14px;
+  color: var(--ink);
+}

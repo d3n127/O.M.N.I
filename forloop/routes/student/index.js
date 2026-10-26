@@ -40,6 +40,20 @@ function getApplications(uid, limit, done) {
   );
 }
 
+/* Latest announcements from the organizations the student belongs to. done(err, rows) */
+function getAnnouncements(uid, limit, done) {
+  db.query(
+    `
+    SELECT a.*, o.name AS org_name, o.color
+    FROM announcements a
+    JOIN memberships m ON m.org_id = a.org_id AND m.user_id = ?
+    JOIN organizations o ON o.id = a.org_id
+    ORDER BY a.created_at DESC, a.id DESC LIMIT ?`,
+    [uid, limit],
+    done,
+  );
+}
+
 /* Runs on every student page so the sidebar badge is always current. */
 function loadBadge(req, res, next) {
   countPending(req.session.user.id, (err, pending) => {
@@ -61,6 +75,7 @@ function showHome(req, res, next) {
       joined: (cb) => db.query('SELECT COUNT(*) AS c FROM memberships WHERE user_id = ?', [uid], cb),
       apps: (cb) => getApplications(uid, 2, cb),
       pending: (cb) => countPending(uid, cb),
+      announcements: (cb) => getAnnouncements(uid, 3, cb),
     },
     (err, results) => {
       if (err) {
@@ -74,6 +89,7 @@ function showHome(req, res, next) {
         orgs,
         events: upcoming.events,
         apps: results.apps,
+        announcements: results.announcements,
         cats: [...new Set(orgs.map((o) => o.category))],
         stats: {
           active: results.pending,
@@ -153,12 +169,76 @@ function showMyOrganizations(req, res, next) {
   );
 }
 
+function showAnnouncements(req, res, next) {
+  getAnnouncements(req.session.user.id, 50, (err, announcements) => {
+    if (err) {
+      return next(err);
+    }
+    res.render('student/announcements', {
+      title: 'Announcements',
+      active: 'orgs',
+      announcements,
+    });
+  });
+}
+
+/* Officers first, then everyone else. Only members of the organization can look. */
+function showDirectory(req, res, next) {
+  const uid = req.session.user.id;
+  const orgId = parseInt(req.params.id, 10);
+  if (!orgId) {
+    return res.redirect('/student/organizations');
+  }
+
+  db.query(
+    `
+    SELECT o.* FROM organizations o
+    JOIN memberships m ON m.org_id = o.id AND m.user_id = ? WHERE o.id = ?`,
+    [uid, orgId],
+    (err, orgs) => {
+      if (err) {
+        return next(err);
+      }
+      if (!orgs.length) {
+        return res.redirect('/student/organizations');
+      }
+
+      db.query(
+        `
+        SELECT u.id, u.full_name, u.avatar, u.program, u.year_level, u.bio, u.hobbies,
+          m.role_title, m.joined_at, COALESCE(r.is_officer, 0) AS is_officer
+        FROM memberships m
+        JOIN users u ON u.id = m.user_id
+        LEFT JOIN org_roles r ON r.org_id = m.org_id AND r.role_title = m.role_title
+        WHERE m.org_id = ?
+        ORDER BY COALESCE(r.precedence, 999), u.full_name`,
+        [orgId],
+        (err, people) => {
+          if (err) {
+            return next(err);
+          }
+          res.render('student/directory', {
+            title: `${orgs[0].name} directory`,
+            active: 'orgs',
+            org: orgs[0],
+            officers: people.filter((p) => p.is_officer),
+            members: people.filter((p) => !p.is_officer),
+            meId: uid,
+          });
+        },
+      );
+    },
+  );
+}
+
 /* ---------- Routes ---------- */
 router.use(loadBadge);
 router.get('/', showHome);
 router.get('/applications', showApplications);
 router.post('/bookmark/:id', toggleBookmark);
 router.get('/organizations', showMyOrganizations);
+router.get('/organizations/:id/directory', showDirectory);
+router.get('/announcements', showAnnouncements);
 
 /* Discover, Apply, Events and RSVP */
 addSharedPages(router, { view: 'student', base: '/student' });

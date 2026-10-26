@@ -5,6 +5,7 @@ const session = require('express-session');
 const db = require('./conn');
 const { viewHelpers, parallel } = require('./utils');
 const { sessionUser } = require('./routes/auth');
+const { startReminders } = require('./routes/reminders');
 
 db.config.dateStrings = true; // DATE columns come back as "YYYY-MM-DD" strings
 db.on('error', logDatabaseError);
@@ -140,6 +141,7 @@ const PORT = process.env.PORT || 3000;
 
 function announceStart() {
   console.log(`O.M.N.I running at http://localhost:${PORT}`);
+  startReminders();
 }
 
 /* Print a clear message when the port is already in use. */

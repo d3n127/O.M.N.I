@@ -7,12 +7,26 @@
   </div>
 </div>
 
+<div class="card q-card">
+  <h2>Application questions</h2>
+  <p class="muted">Ask applicants more than an introduction. One question per line, up to <%= maxQuestions %>. They answer these when they apply.</p>
+  <form method="post" action="/admin/applications/questions" class="form">
+    <textarea name="questions" rows="3" placeholder="e.g. Why do you want to join?"><%= questions.join('\n') %></textarea>
+    <button class="btn small" type="submit">Save questions</button>
+  </form>
+</div>
+
 <% if (!apps.length) { %><div class="card empty-card"><h3>No applications yet.</h3><p>When students apply to <%= org.name %>, they show up here.</p></div><% } %>
 <% apps.forEach(function (a) { %>
   <div class="app-admin">
     <span class="av lg"><%= initials(a.full_name) %></span>
     <div class="who2"><strong><%= a.full_name %></strong><small><%= a.student_id ? 'ID ' + a.student_id + ' · ' : '' %><%= a.program %> · Year <%= a.year_level %></small><small class="blue">Applied <%= fmtShort(a.created_at) %></small></div>
     <blockquote>“<%= a.intro %>”</blockquote>
+    <% if (a.answers.length) { %>
+      <dl class="answers">
+        <% a.answers.forEach(function (x) { %><dt><%= x.question %></dt><dd><%= x.answer %></dd><% }) %>
+      </dl>
+    <% } %>
     <% if (a.status === 'pending') { %>
       <span class="badge pending">Pending</span>
       <form method="post" action="/admin/applications/<%= a.id %>/decline"><button class="btn outline small">Decline</button></form>

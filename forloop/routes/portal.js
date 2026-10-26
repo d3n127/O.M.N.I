@@ -4,9 +4,11 @@
  * with its own view folder ("student" / "nonmember") and URL prefix.
  */
 const db = require('../conn');
-const { text, parallel } = require('../utils');
+const { text, parallel, flash } = require('../utils');
 const { applyToOrg } = require('./apply');
 const { attachProgram } = require('./program');
+const { promoteWaitlist } = require('./rsvp');
+const { buildCalendar } = require('./calendar');
 
 /* SQL condition: events students are allowed to see. */
 const UPCOMING = "e.status = 'published' AND e.event_date >= CURDATE()";
@@ -35,7 +37,25 @@ function getOrgs(uid, search, done) {
       EXISTS(SELECT 1 FROM memberships m WHERE m.org_id = o.id AND m.user_id = ?) AS is_member
     FROM organizations o ${where} ORDER BY o.id`,
     params,
-    done,
+    (err, orgs) => {
+      if (err || !orgs.length) {
+        return done(err, orgs);
+      }
+      /* Each organization's application questions travel with it, for the apply popup */
+      db.query(
+        'SELECT org_id, question FROM org_questions WHERE org_id IN (?) ORDER BY position, id',
+        [orgs.map((o) => o.id)],
+        (err, questions) => {
+          if (err) {
+            return done(err);
+          }
+          orgs.forEach((o) => {
+            o.questions = questions.filter((q) => q.org_id === o.id).map((q) => q.question);
+          });
+          done(null, orgs);
+        },
+      );
+    },
   );
 }
 
@@ -117,7 +137,7 @@ function addSharedPages(router, { view, base }) {
   /* Upcoming events, optionally filtered to one organization (?org=ID) */
   function showEvents(req, res, next) {
     const orgId = Number(req.query.org) || null;
-    const params = [req.session.user.id];
+    const params = [req.session.user.id, req.session.user.id];
     if (orgId) {
       params.push(orgId);
     }
@@ -128,7 +148,10 @@ function addSharedPages(router, { view, base }) {
           db.query(
             `
             SELECT e.*, o.name AS org_name,
-              EXISTS(SELECT 1 FROM rsvps r WHERE r.event_id = e.id AND r.user_id = ?) AS joined
+              (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id AND r.status = 'going') AS going_count,
+              (SELECT r.status FROM rsvps r WHERE r.event_id = e.id AND r.user_id = ?) AS my_status,
+              (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = e.id AND r.status = 'waitlist'
+                AND r.seq <= (SELECT m.seq FROM rsvps m WHERE m.event_id = e.id AND m.user_id = ?)) AS wait_position
             FROM events e JOIN organizations o ON o.id = e.org_id
             WHERE ${UPCOMING} ${orgId ? 'AND e.org_id = ?' : ''}
             ORDER BY e.event_date, e.event_time`,
@@ -156,42 +179,137 @@ function addSharedPages(router, { view, base }) {
     );
   }
 
-  /* RSVP toggles: a second click cancels the first */
+  /*
+   * RSVP toggles: a second click cancels the first. When an event is full the student joins
+   * the waitlist instead, and the next person in line gets the seat if someone cancels.
+   */
   function toggleRsvp(req, res, next) {
     const uid = req.session.user.id;
+    const eventId = req.params.id;
 
     function backToPage() {
       res.redirect(req.get('Referer') || `${base}/events`);
     }
 
     db.query(
-      'DELETE FROM rsvps WHERE event_id = ? AND user_id = ?',
-      [req.params.id, uid],
-      (err, removed) => {
+      'SELECT status FROM rsvps WHERE event_id = ? AND user_id = ?',
+      [eventId, uid],
+      (err, mine) => {
         if (err) {
           return next(err);
         }
-        if (removed.affectedRows) {
-          return backToPage();
+
+        /* Already in: cancel, then offer the freed seat to the waitlist */
+        if (mine.length) {
+          return db.query(
+            'DELETE FROM rsvps WHERE event_id = ? AND user_id = ?',
+            [eventId, uid],
+            (err) => {
+              if (err) {
+                return next(err);
+              }
+              promoteWaitlist(eventId, (err) => {
+                if (err) {
+                  return next(err);
+                }
+                flash(req, mine[0].status === 'waitlist' ? 'You left the waitlist.' : 'RSVP cancelled.');
+                backToPage();
+              });
+            },
+          );
         }
 
         db.query(
-          "INSERT IGNORE INTO rsvps (event_id, user_id) SELECT id, ? FROM events WHERE id = ? AND status = 'published'",
-          [uid, req.params.id],
-          (err) => {
+          `
+          SELECT capacity, title,
+            (SELECT COUNT(*) FROM rsvps r WHERE r.event_id = events.id AND r.status = 'going') AS going
+          FROM events WHERE id = ? AND status = 'published'`,
+          [eventId],
+          (err, found) => {
             if (err) {
               return next(err);
             }
-            backToPage();
+            if (!found.length) {
+              return backToPage();
+            }
+            const { capacity, going, title } = found[0];
+            const full = capacity !== null && going >= capacity;
+
+            db.query(
+              'INSERT IGNORE INTO rsvps (event_id, user_id, status) VALUES (?,?,?)',
+              [eventId, uid, full ? 'waitlist' : 'going'],
+              (err) => {
+                if (err) {
+                  return next(err);
+                }
+                flash(
+                  req,
+                  full
+                    ? `${title} is full. You're on the waitlist and we'll notify you if a seat opens.`
+                    : `You're going to ${title}.`,
+                );
+                backToPage();
+              },
+            );
           },
         );
       },
     );
   }
 
+  /* Calendar file for one published event */
+  function downloadEventCalendar(req, res, next) {
+    db.query(
+      `
+      SELECT e.*, o.name AS org_name FROM events e JOIN organizations o ON o.id = e.org_id
+      WHERE e.id = ? AND e.status = 'published'`,
+      [req.params.id],
+      (err, events) => {
+        if (err) {
+          return next(err);
+        }
+        if (!events.length) {
+          return res.redirect(`${base}/events`);
+        }
+        sendCalendar(res, events, 'event');
+      },
+    );
+  }
+
+  /* Calendar file for every upcoming event the student is going to */
+  function downloadMyCalendar(req, res, next) {
+    db.query(
+      `
+      SELECT e.*, o.name AS org_name
+      FROM rsvps r JOIN events e ON e.id = r.event_id JOIN organizations o ON o.id = e.org_id
+      WHERE r.user_id = ? AND r.status = 'going' AND ${UPCOMING}
+      ORDER BY e.event_date, e.event_time`,
+      [req.session.user.id],
+      (err, events) => {
+        if (err) {
+          return next(err);
+        }
+        sendCalendar(res, events, 'my-events');
+      },
+    );
+  }
+
+  function sendCalendar(res, events, name) {
+    buildCalendar(events, (err, ics) => {
+      if (err) {
+        return res.status(500).send('Could not build the calendar file.');
+      }
+      res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="omni-${name}.ics"`);
+      res.send(ics);
+    });
+  }
+
   router.get('/discover', showDiscover);
   router.post('/apply', applyToOrg);
   router.get('/events', showEvents);
+  router.get('/events/calendar.ics', downloadMyCalendar);
+  router.get('/events/:id/calendar.ics', downloadEventCalendar);
   router.post('/events/:id/rsvp', toggleRsvp);
 }
 

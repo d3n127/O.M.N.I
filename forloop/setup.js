@@ -1,9 +1,9 @@
 // Run once:  npm run setup
 // Creates the database, tables and demo data. WARNING: resets the database.
-const mysql = require('mysql2/promise');
+const mysql = require('mysql2');
 const cfg = require('./conn');
 cfg.on('error', () => {}); // Expected on a fresh machine
-const { hashPassword, ymd } = require('./utils');
+const { hashPassword, ymd, series } = require('./utils');
 
 const SCHEMA = `
 CREATE TABLE organizations (
@@ -109,11 +109,11 @@ CREATE TABLE notifications (
 /* ---------- Helpers ---------- */
 
 /* Date `n` days from today as "YYYY-MM-DD" (negative = in the past). */
-const addDays = (n) => {
+function addDays(n) {
   const d = new Date();
   d.setDate(d.getDate() + n);
   return ymd(d);
-};
+}
 
 /* [role title, precedence (1 = top rank), is officer] given to every organization */
 const DEFAULT_ROLES = [
@@ -125,8 +125,10 @@ const DEFAULT_ROLES = [
   ['Member', 6, 0],
 ];
 
+/* `key` is the short name used to look up the organization's id while seeding. */
 const ORGANIZATIONS = [
   {
+    key: 'F1',
     name: 'F1 Stackmind',
     description: 'Build fast, think strategically, and turn ambitious ideas into working products.',
     category: 'Technology',
@@ -138,6 +140,7 @@ const ORGANIZATIONS = [
     eligibility: 'College of Engineering',
   },
   {
+    key: 'CITEMAS',
     name: 'CITEMAS',
     description: 'Bring stories to life through animation, motion, and collaborative visual projects.',
     category: 'Creative',
@@ -149,6 +152,7 @@ const ORGANIZATIONS = [
     eligibility: 'College of Arts & Sciences',
   },
   {
+    key: 'UIPC',
     name: 'UIPC',
     description: 'A welcoming community for every kind of coder, from first program to full stack.',
     category: 'Technology',
@@ -161,6 +165,7 @@ const ORGANIZATIONS = [
     satisfaction: 4.8,
   },
   {
+    key: 'Xcite',
     name: 'Xcite',
     description: 'Move with confidence, learn new styles, and perform with the campus dance community.',
     category: 'Creative',
@@ -178,24 +183,41 @@ const JOIN_QUOTE =
 
 /* ---------- Seed ---------- */
 
-async function seed() {
-  const conn = await mysql.createConnection({
+/*
+ * Nothing runs while the lines below are read. Each add...() call only queues a step.
+ * Once everything is queued, series() runs the steps one after another.
+ * A step that creates a row saves its new id as ids[key] so later steps can use it.
+ */
+function seed(done) {
+  const conn = mysql.createConnection({
     host: cfg.config.host,
     user: cfg.config.user,
     password: cfg.config.password,
     multipleStatements: true,
   });
   const database = `\`${cfg.config.database}\``;
-  await conn.query(
-    `DROP DATABASE IF EXISTS ${database}; CREATE DATABASE ${database} CHARACTER SET utf8mb4; USE ${database};`,
-  );
-  await conn.query(SCHEMA);
 
-  /* Each helper inserts one row and (where useful) returns its new id. */
-  const insert = async (sql, params) => (await conn.query(sql, params))[0].insertId;
+  const ids = {};
+  const steps = [];
 
-  const addOrg = (o) =>
-    insert(
+  /* Queue a SQL statement. `params` can be a function when it needs ids that do not exist yet. */
+  function queue(sql, params, key) {
+    steps.push((next) => {
+      const values = typeof params === 'function' ? params() : params;
+      conn.query(sql, values, (err, result) => {
+        if (err) {
+          return next(err);
+        }
+        if (key) {
+          ids[key] = result.insertId;
+        }
+        next();
+      });
+    });
+  }
+
+  function addOrg(o) {
+    queue(
       'INSERT INTO organizations (name,description,category,tags,eligibility,color,logo_text,logo_style,meeting_schedule,satisfaction) VALUES (?,?,?,?,?,?,?,?,?,?)',
       [
         o.name,
@@ -209,89 +231,102 @@ async function seed() {
         o.schedule,
         o.satisfaction || 4.5,
       ],
+      o.key,
     );
 
-  /* Every user gets its own password salt; all demo passwords are "password". */
-  const addUser = async (name, email, program, year, role = 'student', orgId = null) =>
-    insert(
-      'INSERT INTO users (full_name,email,password_hash,role,program,year_level,org_id) VALUES (?,?,?,?,?,?,?)',
-      [name, email, await hashPassword('password'), role, program, year, orgId],
-    );
-
-  const addMember = (orgId, userId, roleTitle, joinedAt) =>
-    conn.query('INSERT INTO memberships (org_id,user_id,role_title,joined_at) VALUES (?,?,?,?)', [
-      orgId,
-      userId,
-      roleTitle,
-      joinedAt,
-    ]);
-
-  /* `reviewedAt` is null for pending applications */
-  const addApplication = (orgId, userId, intro, status, createdAt, reviewedAt = null) =>
-    conn.query(
-      'INSERT INTO applications (org_id,user_id,intro,status,created_at,reviewed_at) VALUES (?,?,?,?,?,?)',
-      [orgId, userId, intro, status, createdAt, reviewedAt],
-    );
-
-  const addEvent = (orgId, title, inDays, time, place, status, description) =>
-    insert(
-      'INSERT INTO events (org_id,title,event_date,event_time,location,status,description) VALUES (?,?,?,?,?,?,?)',
-      [orgId, title, addDays(inDays), time, place, status, description],
-    );
-
-  const addNotification = (userId, message, isRead) =>
-    conn.query('INSERT INTO notifications (user_id,message,is_read) VALUES (?,?,?)', [
-      userId,
-      message,
-      isRead,
-    ]);
-
-  /* ----- Organizations and their officer roles ----- */
-  const orgId = {};
-  for (const org of ORGANIZATIONS) {
-    orgId[org.name] = await addOrg(org);
     for (const [title, precedence, isOfficer] of DEFAULT_ROLES) {
-      await conn.query(
+      queue(
         'INSERT INTO org_roles (org_id, role_title, precedence, is_officer) VALUES (?,?,?,?)',
-        [orgId[org.name], title, precedence, isOfficer],
+        () => [ids[o.key], title, precedence, isOfficer],
       );
     }
   }
-  const { UIPC, CITEMAS, Xcite } = orgId;
-  const F1 = orgId['F1 Stackmind'];
+
+  /* Every user gets its own password salt; all demo passwords are "password". */
+  function addUser(key, name, email, program, year, role = 'student', orgKey = null) {
+    steps.push((next) => {
+      hashPassword('password', (err, hash) => {
+        if (err) {
+          return next(err);
+        }
+        conn.query(
+          'INSERT INTO users (full_name,email,password_hash,role,program,year_level,org_id) VALUES (?,?,?,?,?,?,?)',
+          [name, email, hash, role, program, year, orgKey ? ids[orgKey] : null],
+          (err, result) => {
+            if (err) {
+              return next(err);
+            }
+            ids[key] = result.insertId;
+            next();
+          },
+        );
+      });
+    });
+  }
+
+  function addMember(orgKey, userKey, roleTitle, joinedAt) {
+    queue(
+      'INSERT INTO memberships (org_id,user_id,role_title,joined_at) VALUES (?,?,?,?)',
+      () => [ids[orgKey], ids[userKey], roleTitle, joinedAt],
+    );
+  }
+
+  /* `reviewedAt` is null for pending applications */
+  function addApplication(orgKey, userKey, intro, status, createdAt, reviewedAt = null) {
+    queue(
+      'INSERT INTO applications (org_id,user_id,intro,status,created_at,reviewed_at) VALUES (?,?,?,?,?,?)',
+      () => [ids[orgKey], ids[userKey], intro, status, createdAt, reviewedAt],
+    );
+  }
+
+  function addEvent(key, orgKey, title, inDays, time, place, status, description) {
+    queue(
+      'INSERT INTO events (org_id,title,event_date,event_time,location,status,description) VALUES (?,?,?,?,?,?,?)',
+      () => [ids[orgKey], title, addDays(inDays), time, place, status, description],
+      key,
+    );
+  }
+
+  function addNotification(userKey, message, isRead) {
+    queue('INSERT INTO notifications (user_id,message,is_read) VALUES (?,?,?)', () => [
+      ids[userKey],
+      message,
+      isRead,
+    ]);
+  }
+
+  /* ----- Fresh database and tables ----- */
+  queue(
+    `DROP DATABASE IF EXISTS ${database}; CREATE DATABASE ${database} CHARACTER SET utf8mb4; USE ${database};`,
+    [],
+  );
+  queue(SCHEMA, []);
+
+  /* ----- Organizations and their officer roles ----- */
+  ORGANIZATIONS.forEach(addOrg);
 
   /* ----- Main demo accounts ----- */
-  const maya = await addUser('Maya Alvarez', 'maya@north.edu', 'BS Computer Science', 2);
-  const alex = await addUser(
-    'Alex Rivera',
-    'admin@codecraft.edu',
-    'Faculty Advisor',
-    1,
-    'adviser',
-    UIPC,
-  );
+  addUser('maya', 'Maya Alvarez', 'maya@north.edu', 'BS Computer Science', 2);
+  addUser('alex', 'Alex Rivera', 'admin@codecraft.edu', 'Faculty Advisor', 1, 'adviser', 'UIPC');
 
   /* ----- UIPC officers and early members ----- */
   const core = [
-    ['Theo Kim', 'theo@north.edu', 'BS Information Systems', 3, 'President', '2023-10-05'],
-    ['Morgan Liu', 'morgan@north.edu', 'BS Computer Science', 3, 'Vice President', '2024-01-12'],
-    ['Eli Parker', 'eli@north.edu', 'BS Software Engineering', 2, 'Events Lead', '2024-02-09'],
-    ['Ravi Nair', 'ravi@north.edu', 'BS Computer Science', 2, 'Member', '2024-09-04'],
-    ['Chloe Martin', 'chloe@north.edu', 'BS Data Science', 2, 'Member', '2024-09-18'],
+    ['theo', 'Theo Kim', 'theo@north.edu', 'BS Information Systems', 3, 'President', '2023-10-05'],
+    ['morgan', 'Morgan Liu', 'morgan@north.edu', 'BS Computer Science', 3, 'Vice President', '2024-01-12'],
+    ['eli', 'Eli Parker', 'eli@north.edu', 'BS Software Engineering', 2, 'Events Lead', '2024-02-09'],
+    ['ravi', 'Ravi Nair', 'ravi@north.edu', 'BS Computer Science', 2, 'Member', '2024-09-04'],
+    ['chloe', 'Chloe Martin', 'chloe@north.edu', 'BS Data Science', 2, 'Member', '2024-09-18'],
   ];
-  let theo;
-  for (const [name, email, program, year, roleTitle, joinedAt] of core) {
-    const id = await addUser(name, email, program, year);
-    if (name === 'Theo Kim') {
-      theo = id;
-    }
-    await addMember(UIPC, id, roleTitle, joinedAt);
+  for (const [key, name, email, program, year, roleTitle, joinedAt] of core) {
+    addUser(key, name, email, program, year);
+    addMember('UIPC', key, roleTitle, joinedAt);
   }
 
   /* ----- UIPC applicants waiting for review ----- */
   const applicants = [
-    ['Jordan Lee', 'jordan@north.edu', 'BS Computer Science', 2, 4, JOIN_QUOTE],
+    ['jordan', 'Jordan Lee', 'jordan@north.edu', 'BS Computer Science', 2, 4, JOIN_QUOTE],
     [
+      'amara',
       'Amara Nwosu',
       'amara@north.edu',
       'BS Information Technology',
@@ -300,6 +335,7 @@ async function seed() {
       'I want to learn web development and ship a real project with a team.',
     ],
     [
+      'sofia',
       'Sofia Reyes',
       'sofia@north.edu',
       'BS Data Science',
@@ -308,27 +344,22 @@ async function seed() {
       'Looking for a place to practice Python and meet people who enjoy debugging together.',
     ],
   ];
-  for (const [name, email, program, year, daysAgo, intro] of applicants) {
-    const id = await addUser(name, email, program, year);
-    await addApplication(UIPC, id, intro, 'pending', `${addDays(-daysAgo)} 10:00:00`);
+  for (const [key, name, email, program, year, daysAgo, intro] of applicants) {
+    addUser(key, name, email, program, year);
+    addApplication('UIPC', key, intro, 'pending', `${addDays(-daysAgo)} 10:00:00`);
   }
-  await addApplication(
-    UIPC,
-    theo,
-    JOIN_QUOTE,
-    'approved',
-    '2023-10-01 10:00:00',
-    '2023-10-02 10:00:00',
-  );
+  addApplication('UIPC', 'theo', JOIN_QUOTE, 'approved', '2023-10-01 10:00:00', '2023-10-02 10:00:00');
 
   /* ----- 30 filler students, so Reports has data to show ----- */
   const firstNames = ['Ana', 'Ben', 'Cleo', 'Dev', 'Ella', 'Finn', 'Gia', 'Hugo', 'Iris', 'Jules'];
   const lastNames = ['Santos', 'Park', 'Okafor'];
-  const filler = [];
+  const fillerKeys = [];
   for (const last of lastNames) {
     for (const first of firstNames) {
+      const key = `filler${fillerKeys.length}`;
       const email = `${first}.${last}@north.edu`.toLowerCase();
-      filler.push(await addUser(`${first} ${last}`, email, 'Undeclared', 1 + (filler.length % 4)));
+      addUser(key, `${first} ${last}`, email, 'Undeclared', 1 + (fillerKeys.length % 4));
+      fillerKeys.push(key);
     }
   }
 
@@ -344,48 +375,49 @@ async function seed() {
   const monthsAgo = joinSchedule.flatMap(([months, count]) => Array(count).fill(months));
   const now = new Date();
 
-  for (let i = 0; i < filler.length; i++) {
+  fillerKeys.forEach((key, i) => {
     if (i < 23) {
       const joined = ymd(new Date(now.getFullYear(), now.getMonth() - monthsAgo[i], 10));
-      await addMember(UIPC, filler[i], 'Member', joined);
+      addMember('UIPC', key, 'Member', joined);
     } else {
-      const org = i < 26 ? F1 : i < 28 ? CITEMAS : Xcite;
-      await addMember(org, filler[i], 'Member', addDays(-(i * 3)));
+      const orgKey = i < 26 ? 'F1' : i < 28 ? 'CITEMAS' : 'Xcite';
+      addMember(orgKey, key, 'Member', addDays(-(i * 3)));
     }
-  }
+  });
 
   /* ----- Maya: member of Xcite and CITEMAS, pending at F1 Stackmind ----- */
-  await conn.query('UPDATE users SET hobbies = ? WHERE id = ?', ['Dancing, Animation, Chess', maya]);
-  await addMember(Xcite, maya, 'Member', addDays(-14));
-  await addMember(CITEMAS, maya, 'Member', addDays(-3));
-  await addApplication(
-    Xcite,
-    maya,
+  queue('UPDATE users SET hobbies = ? WHERE id = ?', () => ['Dancing, Animation, Chess', ids.maya]);
+  addMember('Xcite', 'maya', 'Member', addDays(-14));
+  addMember('CITEMAS', 'maya', 'Member', addDays(-3));
+  addApplication(
+    'Xcite',
+    'maya',
     'I have always loved dancing and want to perform with a team.',
     'approved',
     `${addDays(-16)} 09:00:00`,
     `${addDays(-14)} 09:00:00`,
   );
-  await addApplication(
-    CITEMAS,
-    maya,
+  addApplication(
+    'CITEMAS',
+    'maya',
     'I want to learn 2D animation and collaborate on short films.',
     'approved',
     `${addDays(-4)} 09:00:00`,
     `${addDays(-3)} 09:00:00`,
   );
-  await addApplication(
-    F1,
-    maya,
+  addApplication(
+    'F1',
+    'maya',
     'I want to build a product with a fast-moving team.',
     'pending',
     `${addDays(0)} 08:30:00`,
   );
-  await conn.query('INSERT INTO bookmarks (user_id,org_id) VALUES (?,?)', [maya, CITEMAS]);
+  queue('INSERT INTO bookmarks (user_id,org_id) VALUES (?,?)', () => [ids.maya, ids.CITEMAS]);
 
   /* ----- Events (the day argument is "days from today") ----- */
-  await addEvent(
-    F1,
+  addEvent(
+    'hackathon',
+    'F1',
     'Hackathon',
     2,
     '09:00',
@@ -393,8 +425,9 @@ async function seed() {
     'published',
     '24 hours of building. Bring a team or find one on the day.',
   );
-  const debugging = await addEvent(
-    UIPC,
+  addEvent(
+    'debugging',
+    'UIPC',
     'Debugging',
     3,
     '14:00',
@@ -402,8 +435,9 @@ async function seed() {
     'published',
     'Bring your broken code and fix it together.',
   );
-  await addEvent(
-    UIPC,
+  addEvent(
+    'sprint',
+    'UIPC',
     'Open Source Sprint',
     4,
     '14:00',
@@ -411,8 +445,9 @@ async function seed() {
     'draft',
     'Make your first open source contribution.',
   );
-  await addEvent(
-    Xcite,
+  addEvent(
+    'workshop',
+    'Xcite',
     'Open Floor Workshop',
     5,
     '17:00',
@@ -420,8 +455,9 @@ async function seed() {
     'published',
     'Learn a new style and perform at the end.',
   );
-  await addEvent(
-    CITEMAS,
+  addEvent(
+    'jam',
+    'CITEMAS',
     'Animation Jam',
     6,
     '16:00',
@@ -429,31 +465,31 @@ async function seed() {
     'published',
     'Make a 10-second loop in one afternoon.',
   );
-  for (const student of filler.slice(0, 12)) {
-    await conn.query('INSERT INTO rsvps (event_id,user_id) VALUES (?,?)', [debugging, student]);
+  for (const key of fillerKeys.slice(0, 12)) {
+    queue('INSERT INTO rsvps (event_id,user_id) VALUES (?,?)', () => [ids.debugging, ids[key]]);
   }
 
   /* ----- Notifications ----- */
-  await addNotification(maya, 'CITEMAS accepted your application. Welcome aboard!', 0);
-  await addNotification(maya, 'New event from UIPC: Debugging', 1);
-  await addNotification(alex, 'Jordan Lee applied to join UIPC.', 0);
-  await addNotification(alex, 'Amara Nwosu applied to join UIPC.', 0);
+  addNotification('maya', 'CITEMAS accepted your application. Welcome aboard!', 0);
+  addNotification('maya', 'New event from UIPC: Debugging', 1);
+  addNotification('alex', 'Jordan Lee applied to join UIPC.', 0);
+  addNotification('alex', 'Amara Nwosu applied to join UIPC.', 0);
 
-  await conn.end();
+  /* ----- Run everything in order ----- */
+  series(steps, (err) => {
+    conn.end();
+    done(err);
+  });
+}
+
+seed((err) => {
+  if (err) {
+    console.error('Setup failed:', err.message);
+    process.exit(1);
+  }
   cfg.destroy(); // Release the connection
   console.log(
     '\nDatabase "%s" is ready.\n  Student:  maya@north.edu / password\n  Adviser:  admin@codecraft.edu / password (UIPC)\n',
     cfg.config.database,
   );
-}
-
-async function main() {
-  try {
-    await seed();
-  } catch (err) {
-    console.error('Setup failed:', err.message);
-    process.exit(1);
-  }
-}
-
-main();
+});

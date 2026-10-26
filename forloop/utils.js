@@ -1,25 +1,17 @@
 const { randomBytes, scrypt, timingSafeEqual } = require('crypto');
-const { promisify } = require('util');
-
-const scryptAsync = promisify(scrypt);
 
 /* ---------- Request helpers ---------- */
 
-/* Lets async route handlers throw: errors go to Express's error handler. */
-const wrap = (fn) => (req, res, next) => {
-  Promise.resolve(fn(req, res, next)).catch(next);
-};
-
 /* One-time message shown on the next page ("ok" or "err"). */
-const flash = (req, msg, type = 'ok') => {
+function flash(req, msg, type = 'ok') {
   req.session.flash = { msg, type };
-};
+}
 
 /* Form input -> trimmed string, optionally cut to `max` characters. */
-const text = (value, max) => {
+function text(value, max) {
   const s = String(value || '').trim();
   return max ? s.slice(0, max) : s;
-};
+}
 
 /* Form input -> trimmed, lowercased email. */
 const cleanEmail = (value) => text(value).toLowerCase();
@@ -27,26 +19,86 @@ const cleanEmail = (value) => text(value).toLowerCase();
 const EMAIL_PATTERN = /^\S+@\S+\.\S+$/;
 const ROLES = ['student', 'adviser'];
 
+/* ---------- Callback helpers ---------- */
+/* Every function that talks to the database finishes by calling `done(err, result)`. */
+
+/* Run the steps one after another. Each step is a function that takes (callback). */
+function series(steps, done) {
+  let index = 0;
+
+  function runNext(err) {
+    if (err || index === steps.length) {
+      return done(err);
+    }
+    const step = steps[index];
+    index += 1;
+    step(runNext);
+  }
+  runNext();
+}
+
+/*
+ * Run the tasks at the same time and collect their results by name.
+ *   parallel({ a: (cb) => ..., b: (cb) => ... }, (err, results) => results.a, results.b)
+ * Stops at the first error.
+ */
+function parallel(tasks, done) {
+  const names = Object.keys(tasks);
+  const results = {};
+  let remaining = names.length;
+  let failed = false;
+
+  if (remaining === 0) {
+    return done(null, results);
+  }
+
+  names.forEach((name) => {
+    tasks[name]((err, value) => {
+      if (failed) {
+        return;
+      }
+      if (err) {
+        failed = true;
+        return done(err);
+      }
+      results[name] = value;
+      remaining -= 1;
+      if (remaining === 0) {
+        done(null, results);
+      }
+    });
+  });
+}
+
 /* ---------- Passwords ---------- */
 /* Stored as "salt:hexkey": a random salt plus a slow scrypt hash. */
 const KEYLEN = 64;
 
-const derive = (password, salt) => scryptAsync(String(password), salt, KEYLEN);
-
-async function hashPassword(password) {
+/* done(err, "salt:hexkey") */
+function hashPassword(password, done) {
   const salt = randomBytes(16).toString('hex');
-  const key = await derive(password, salt);
-  return `${salt}:${key.toString('hex')}`;
+  scrypt(String(password), salt, KEYLEN, (err, key) => {
+    if (err) {
+      return done(err);
+    }
+    done(null, `${salt}:${key.toString('hex')}`);
+  });
 }
 
-async function verifyPassword(password, stored) {
+/* done(err, true | false) */
+function verifyPassword(password, stored, done) {
   const [salt, key] = String(stored).split(':');
   if (!salt || !key) {
-    return false;
+    return done(null, false);
   }
-  const attempt = await derive(password, salt);
-  const saved = Buffer.from(key, 'hex');
-  return saved.length === attempt.length && timingSafeEqual(saved, attempt);
+
+  scrypt(String(password), salt, KEYLEN, (err, attempt) => {
+    if (err) {
+      return done(err);
+    }
+    const saved = Buffer.from(key, 'hex');
+    done(null, saved.length === attempt.length && timingSafeEqual(saved, attempt));
+  });
 }
 
 /* ---------- Dates ---------- */
@@ -179,8 +231,9 @@ module.exports = {
   MON,
   DEPARTMENTS,
   DEPT_NAMES,
-  wrap,
   flash,
+  series,
+  parallel,
   text,
   cleanEmail,
   EMAIL_PATTERN,

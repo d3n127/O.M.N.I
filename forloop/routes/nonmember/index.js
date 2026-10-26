@@ -3,7 +3,7 @@
  * Home is defined here; Discover, Apply, Events and RSVP come from ../portal.
  */
 const express = require('express');
-const { wrap } = require('../../utils');
+const { parallel } = require('../../utils');
 const { requireRole, requireNonMember, requireStudentInfo } = require('../auth');
 const { getOrgs, getUpcomingSummary, addSharedPages } = require('../portal');
 
@@ -12,21 +12,31 @@ router.use(requireRole('student'));
 router.use(requireStudentInfo);
 router.use(requireNonMember);
 
-async function showHome(req, res) {
-  const orgs = await getOrgs(req.session.user.id);
-  const upcoming = await getUpcomingSummary();
+function showHome(req, res, next) {
+  parallel(
+    {
+      orgs: (cb) => getOrgs(req.session.user.id, '', cb),
+      upcoming: (cb) => getUpcomingSummary(3, cb),
+    },
+    (err, results) => {
+      if (err) {
+        return next(err);
+      }
+      const { orgs, upcoming } = results;
 
-  res.render('nonmember/home', {
-    title: 'Home',
-    active: 'home',
-    orgs,
-    events: upcoming.events,
-    cats: [...new Set(orgs.map((o) => o.category))],
-    stats: { explore: orgs.length, upcoming: upcoming.total },
-  });
+      res.render('nonmember/home', {
+        title: 'Home',
+        active: 'home',
+        orgs,
+        events: upcoming.events,
+        cats: [...new Set(orgs.map((o) => o.category))],
+        stats: { explore: orgs.length, upcoming: upcoming.total },
+      });
+    },
+  );
 }
 
-router.get('/', wrap(showHome));
+router.get('/', showHome);
 addSharedPages(router, { view: 'nonmember', base: '/nonmember' });
 
 module.exports = router;

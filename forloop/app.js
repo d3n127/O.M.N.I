@@ -2,8 +2,8 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
-const db = require('./conn').promise();
-const { viewHelpers, wrap } = require('./utils');
+const db = require('./conn');
+const { viewHelpers, parallel } = require('./utils');
 const { sessionUser } = require('./routes/auth');
 
 db.config.dateStrings = true; // DATE columns come back as "YYYY-MM-DD" strings
@@ -21,24 +21,26 @@ function logDatabaseError(err) {
 }
 
 /* Re-read the user from the DB on every request, so role changes and deleted accounts apply at once. */
-async function loadUser(req, res, next) {
+function loadUser(req, res, next) {
   const saved = req.session.user;
   if (!saved) {
     return next();
   }
 
-  const [[row]] = await db.query('SELECT id, full_name, role, org_id FROM users WHERE id = ?', [
-    saved.id,
-  ]);
-  if (!row) {
-    return req.session.destroy(() => next());
-  }
-  req.session.user = sessionUser(row);
-  next();
+  db.query('SELECT id, full_name, role, org_id FROM users WHERE id = ?', [saved.id], (err, rows) => {
+    if (err) {
+      return next(err);
+    }
+    if (!rows.length) {
+      return req.session.destroy(() => next());
+    }
+    req.session.user = sessionUser(rows[0]);
+    next();
+  });
 }
 
 /* Values every page can use: me, flash message, notifications. */
-async function loadPageValues(req, res, next) {
+function loadPageValues(req, res, next) {
   const user = req.session.user || null;
   res.locals.me = user;
   res.locals.flash = req.session.flash || null;
@@ -48,27 +50,47 @@ async function loadPageValues(req, res, next) {
   res.locals.unread = 0;
   res.locals.badge = 0;
 
-  if (user) {
-    const [notes] = await db.query(
-      'SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT 8',
-      [user.id],
-    );
-    const [[unread]] = await db.query(
-      'SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = 0',
-      [user.id],
-    );
-    res.locals.notes = notes;
-    res.locals.unread = unread.c;
+  if (!user) {
+    return next();
   }
-  next();
+
+  parallel(
+    {
+      notes: (cb) =>
+        db.query(
+          'SELECT * FROM notifications WHERE user_id = ? ORDER BY id DESC LIMIT 8',
+          [user.id],
+          cb,
+        ),
+      unread: (cb) =>
+        db.query(
+          'SELECT COUNT(*) AS c FROM notifications WHERE user_id = ? AND is_read = 0',
+          [user.id],
+          cb,
+        ),
+    },
+    (err, results) => {
+      if (err) {
+        return next(err);
+      }
+      res.locals.notes = results.notes;
+      res.locals.unread = results.unread[0].c;
+      next();
+    },
+  );
 }
 
-async function markNotificationsRead(req, res) {
+function markNotificationsRead(req, res, next) {
   if (!req.session.user) {
     return res.status(401).json({ ok: false });
   }
-  await db.query('UPDATE notifications SET is_read = 1 WHERE user_id = ?', [req.session.user.id]);
-  res.json({ ok: true });
+
+  db.query('UPDATE notifications SET is_read = 1 WHERE user_id = ?', [req.session.user.id], (err) => {
+    if (err) {
+      return next(err);
+    }
+    res.json({ ok: true });
+  });
 }
 
 function showNotFound(req, res) {
@@ -98,8 +120,8 @@ app.use(
   }),
 );
 
-app.use(wrap(loadUser));
-app.use(wrap(loadPageValues));
+app.use(loadUser);
+app.use(loadPageValues);
 
 /* ---------- Routes ---------- */
 app.use('/', require('./routes/auth'));
@@ -107,7 +129,7 @@ app.use('/', require('./routes/profile'));
 app.use('/student', require('./routes/student'));
 app.use('/nonmember', require('./routes/nonmember'));
 app.use('/admin', require('./routes/admin'));
-app.post('/notifications/read', wrap(markNotificationsRead));
+app.post('/notifications/read', markNotificationsRead);
 
 app.use(showNotFound);
 app.use(showServerError);

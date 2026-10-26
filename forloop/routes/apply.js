@@ -1,9 +1,25 @@
 /* Apply-to-organization handler, shared by the student and non-member portals. */
-const db = require('../conn').promise();
+const db = require('../conn');
 const { text } = require('../utils');
 
+/* Create the application, or re-open a rejected one as pending. done(err) */
+function saveApplication(existing, orgId, userId, intro, done) {
+  if (existing) {
+    return db.query(
+      "UPDATE applications SET intro = ?, status = 'pending', created_at = NOW(), reviewed_at = NULL WHERE id = ?",
+      [intro, existing.id],
+      done,
+    );
+  }
+  db.query(
+    'INSERT INTO applications (org_id, user_id, intro) VALUES (?,?,?)',
+    [orgId, userId, intro],
+    done,
+  );
+}
+
 /* Replies with JSON: { ok: true, name } on success, or { error } with an HTTP error status. */
-async function applyToOrg(req, res) {
+function applyToOrg(req, res, next) {
   const user = req.session.user;
   if (!user) {
     return res.status(401).json({ error: 'Sign in to continue.' });
@@ -23,49 +39,63 @@ async function applyToOrg(req, res) {
     return res.status(400).json({ error: 'Agree to share your student profile to continue.' });
   }
 
-  const [[org]] = await db.query('SELECT * FROM organizations WHERE id = ?', [orgId]);
-  if (!org) {
-    return res.status(404).json({ error: 'That organization no longer exists.' });
-  }
+  db.query('SELECT * FROM organizations WHERE id = ?', [orgId], (err, orgs) => {
+    if (err) {
+      return next(err);
+    }
+    if (!orgs.length) {
+      return res.status(404).json({ error: 'That organization no longer exists.' });
+    }
+    const org = orgs[0];
 
-  const [memberships] = await db.query(
-    'SELECT id FROM memberships WHERE org_id = ? AND user_id = ?',
-    [orgId, user.id],
-  );
-  if (memberships.length) {
-    return res.status(400).json({ error: `You are already a member of ${org.name}.` });
-  }
+    db.query(
+      'SELECT id FROM memberships WHERE org_id = ? AND user_id = ?',
+      [orgId, user.id],
+      (err, memberships) => {
+        if (err) {
+          return next(err);
+        }
+        if (memberships.length) {
+          return res.status(400).json({ error: `You are already a member of ${org.name}.` });
+        }
 
-  /* One application per org. A rejected one can be re-submitted; anything else cannot. */
-  const [[existing]] = await db.query(
-    'SELECT id, status FROM applications WHERE org_id = ? AND user_id = ?',
-    [orgId, user.id],
-  );
-  if (existing && existing.status !== 'rejected') {
-    return res
-      .status(400)
-      .json({ error: 'You already applied. Check the Applications tab for updates.' });
-  }
+        /* One application per org. A rejected one can be re-submitted; anything else cannot. */
+        db.query(
+          'SELECT id, status FROM applications WHERE org_id = ? AND user_id = ?',
+          [orgId, user.id],
+          (err, found) => {
+            if (err) {
+              return next(err);
+            }
+            const existing = found[0];
+            if (existing && existing.status !== 'rejected') {
+              return res
+                .status(400)
+                .json({ error: 'You already applied. Check the Applications tab for updates.' });
+            }
 
-  if (existing) {
-    await db.query(
-      "UPDATE applications SET intro = ?, status = 'pending', created_at = NOW(), reviewed_at = NULL WHERE id = ?",
-      [intro, existing.id],
+            saveApplication(existing, orgId, user.id, intro, (err) => {
+              if (err) {
+                return next(err);
+              }
+
+              /* Tell the organization's adviser(s) */
+              db.query(
+                "INSERT INTO notifications (user_id, message) SELECT id, ? FROM users WHERE role = 'adviser' AND org_id = ?",
+                [`${user.name} applied to join ${org.name}.`, orgId],
+                (err) => {
+                  if (err) {
+                    return next(err);
+                  }
+                  res.json({ ok: true, name: org.name });
+                },
+              );
+            });
+          },
+        );
+      },
     );
-  } else {
-    await db.query('INSERT INTO applications (org_id, user_id, intro) VALUES (?,?,?)', [
-      orgId,
-      user.id,
-      intro,
-    ]);
-  }
-
-  /* Tell the organization's adviser(s) */
-  await db.query(
-    "INSERT INTO notifications (user_id, message) SELECT id, ? FROM users WHERE role = 'adviser' AND org_id = ?",
-    [`${user.name} applied to join ${org.name}.`, orgId],
-  );
-  res.json({ ok: true, name: org.name });
+  });
 }
 
 module.exports = { applyToOrg };

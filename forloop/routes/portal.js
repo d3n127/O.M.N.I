@@ -3,15 +3,18 @@
  * Discover, Apply, Events and RSVP. Each portal calls addSharedPages()
  * with its own view folder ("student" / "nonmember") and URL prefix.
  */
-const db = require('../conn').promise();
-const { wrap, text } = require('../utils');
+const db = require('../conn');
+const { text, parallel } = require('../utils');
 const { applyToOrg } = require('./apply');
 
 /* SQL condition: events students are allowed to see. */
 const UPCOMING = "e.status = 'published' AND e.event_date >= CURDATE()";
 
-/* Organizations with member count and this user's saved / application / member state. */
-async function getOrgs(uid, search = '') {
+/*
+ * Organizations with member count and this user's saved / application / member state.
+ * Pass '' as `search` to get every organization. done(err, orgs)
+ */
+function getOrgs(uid, search, done) {
   const params = [uid, uid, uid];
   let where = '';
 
@@ -22,7 +25,7 @@ async function getOrgs(uid, search = '') {
     params.push(like, like, like, like, like);
   }
 
-  const [orgs] = await db.query(
+  db.query(
     `
     SELECT o.*,
       (SELECT COUNT(*) FROM memberships m WHERE m.org_id = o.id) AS member_count,
@@ -31,90 +34,159 @@ async function getOrgs(uid, search = '') {
       EXISTS(SELECT 1 FROM memberships m WHERE m.org_id = o.id AND m.user_id = ?) AS is_member
     FROM organizations o ${where} ORDER BY o.id`,
     params,
+    done,
   );
-  return orgs;
 }
 
-/* The next few upcoming events across all organizations, plus how many exist. */
-async function getUpcomingSummary(limit = 3) {
-  const [[count]] = await db.query(`SELECT COUNT(*) AS c FROM events e WHERE ${UPCOMING}`);
-  const [events] = await db.query(
-    `
-    SELECT e.*, o.name AS org_name FROM events e JOIN organizations o ON o.id = e.org_id
-    WHERE ${UPCOMING} ORDER BY e.event_date, e.event_time LIMIT ?`,
-    [limit],
+/* The next `limit` upcoming events across all organizations, plus how many exist. done(err, { total, events }) */
+function getUpcomingSummary(limit, done) {
+  parallel(
+    {
+      count: (cb) => db.query(`SELECT COUNT(*) AS c FROM events e WHERE ${UPCOMING}`, cb),
+      events: (cb) =>
+        db.query(
+          `
+          SELECT e.*, o.name AS org_name FROM events e JOIN organizations o ON o.id = e.org_id
+          WHERE ${UPCOMING} ORDER BY e.event_date, e.event_time LIMIT ?`,
+          [limit],
+          cb,
+        ),
+    },
+    (err, results) => {
+      if (err) {
+        return done(err);
+      }
+      done(null, { total: results.count[0].c, events: results.events });
+    },
   );
-  return { total: count.c, events };
 }
 
-/* Distinct organization categories, used by the filter chips. */
-async function getAllCategories() {
-  const [rows] = await db.query('SELECT DISTINCT category FROM organizations ORDER BY category');
-  return rows.map((r) => r.category);
+/* Distinct organization categories, used by the filter chips. done(err, ['Creative', ...]) */
+function getAllCategories(done) {
+  db.query('SELECT DISTINCT category FROM organizations ORDER BY category', (err, rows) => {
+    if (err) {
+      return done(err);
+    }
+    done(
+      null,
+      rows.map((r) => r.category),
+    );
+  });
 }
 
 /* Registers Discover, Apply, Events and RSVP on a portal's router. */
 function addSharedPages(router, { view, base }) {
   /* Browse and search organizations */
-  async function showDiscover(req, res) {
+  function showDiscover(req, res, next) {
     const q = text(req.query.q);
-    res.render(`${view}/discover`, {
-      title: 'Discover',
-      active: 'discover',
-      orgs: await getOrgs(req.session.user.id, q),
-      q,
-      cats: await getAllCategories(),
+
+    parallel(
+      {
+        orgs: (cb) => getOrgs(req.session.user.id, q, cb),
+        cats: (cb) => getAllCategories(cb),
+      },
+      (err, results) => {
+        if (err) {
+          return next(err);
+        }
+        res.render(`${view}/discover`, {
+          title: 'Discover',
+          active: 'discover',
+          orgs: results.orgs,
+          q,
+          cats: results.cats,
+        });
+      },
+    );
+  }
+
+  /* The organization's name when filtering by ?org=ID, otherwise null. done(err, name | null) */
+  function getFilterName(orgId, done) {
+    if (!orgId) {
+      return done(null, null);
+    }
+    db.query('SELECT name FROM organizations WHERE id = ?', [orgId], (err, rows) => {
+      if (err) {
+        return done(err);
+      }
+      done(null, rows.length ? rows[0].name : null);
     });
   }
 
   /* Upcoming events, optionally filtered to one organization (?org=ID) */
-  async function showEvents(req, res) {
+  function showEvents(req, res, next) {
     const orgId = Number(req.query.org) || null;
     const params = [req.session.user.id];
     if (orgId) {
       params.push(orgId);
     }
 
-    const [events] = await db.query(
-      `
-      SELECT e.*, o.name AS org_name,
-        EXISTS(SELECT 1 FROM rsvps r WHERE r.event_id = e.id AND r.user_id = ?) AS joined
-      FROM events e JOIN organizations o ON o.id = e.org_id
-      WHERE ${UPCOMING} ${orgId ? 'AND e.org_id = ?' : ''}
-      ORDER BY e.event_date, e.event_time`,
-      params,
+    parallel(
+      {
+        events: (cb) =>
+          db.query(
+            `
+            SELECT e.*, o.name AS org_name,
+              EXISTS(SELECT 1 FROM rsvps r WHERE r.event_id = e.id AND r.user_id = ?) AS joined
+            FROM events e JOIN organizations o ON o.id = e.org_id
+            WHERE ${UPCOMING} ${orgId ? 'AND e.org_id = ?' : ''}
+            ORDER BY e.event_date, e.event_time`,
+            params,
+            cb,
+          ),
+        filterOrg: (cb) => getFilterName(orgId, cb),
+      },
+      (err, results) => {
+        if (err) {
+          return next(err);
+        }
+        res.render(`${view}/events`, {
+          title: 'Events',
+          active: 'events',
+          events: results.events,
+          filterOrg: results.filterOrg,
+        });
+      },
     );
-
-    let filterOrg = null;
-    if (orgId) {
-      const [[org]] = await db.query('SELECT name FROM organizations WHERE id = ?', [orgId]);
-      filterOrg = org ? org.name : null;
-    }
-
-    res.render(`${view}/events`, { title: 'Events', active: 'events', events, filterOrg });
   }
 
   /* RSVP toggles: a second click cancels the first */
-  async function toggleRsvp(req, res) {
+  function toggleRsvp(req, res, next) {
     const uid = req.session.user.id;
-    const [removed] = await db.query('DELETE FROM rsvps WHERE event_id = ? AND user_id = ?', [
-      req.params.id,
-      uid,
-    ]);
 
-    if (!removed.affectedRows) {
-      await db.query(
-        "INSERT IGNORE INTO rsvps (event_id, user_id) SELECT id, ? FROM events WHERE id = ? AND status = 'published'",
-        [uid, req.params.id],
-      );
+    function backToPage() {
+      res.redirect(req.get('Referer') || `${base}/events`);
     }
-    res.redirect(req.get('Referer') || `${base}/events`);
+
+    db.query(
+      'DELETE FROM rsvps WHERE event_id = ? AND user_id = ?',
+      [req.params.id, uid],
+      (err, removed) => {
+        if (err) {
+          return next(err);
+        }
+        if (removed.affectedRows) {
+          return backToPage();
+        }
+
+        db.query(
+          "INSERT IGNORE INTO rsvps (event_id, user_id) SELECT id, ? FROM events WHERE id = ? AND status = 'published'",
+          [uid, req.params.id],
+          (err) => {
+            if (err) {
+              return next(err);
+            }
+            backToPage();
+          },
+        );
+      },
+    );
   }
 
-  router.get('/discover', wrap(showDiscover));
-  router.post('/apply', wrap(applyToOrg));
-  router.get('/events', wrap(showEvents));
-  router.post('/events/:id/rsvp', wrap(toggleRsvp));
+  router.get('/discover', showDiscover);
+  router.post('/apply', applyToOrg);
+  router.get('/events', showEvents);
+  router.post('/events/:id/rsvp', toggleRsvp);
 }
 
 module.exports = { UPCOMING, getOrgs, getUpcomingSummary, addSharedPages };

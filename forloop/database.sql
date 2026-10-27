@@ -28,7 +28,7 @@ CREATE TABLE organizations (
   category VARCHAR(40) NOT NULL DEFAULT 'Technology',
   tags VARCHAR(160) NOT NULL DEFAULT '',
   eligibility VARCHAR(100) NOT NULL DEFAULT 'International',
-  color ENUM('yellow','teal','lime','lilac') NOT NULL DEFAULT 'teal',
+  color ENUM('yellow','teal','lime','lilac','salmon','sky','rose','sand','black','red','brown','orange') NOT NULL DEFAULT 'teal',
   logo_img VARCHAR(120) NOT NULL DEFAULT 'OR',
   logo_style ENUM('tile','navy','cream','dark') NOT NULL DEFAULT 'dark',
   meeting_schedule VARCHAR(120) NOT NULL DEFAULT 'To be announced',
@@ -154,6 +154,8 @@ CREATE TABLE announcements (
   org_id INT NOT NULL,
   title VARCHAR(140) NOT NULL,
   body TEXT,
+  kind ENUM('update','recruitment') NOT NULL DEFAULT 'update',
+  closes_on DATE NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
@@ -357,6 +359,10 @@ INSERT INTO announcements (org_id, title, body) VALUES
 (3, 'Welcome to the new semester',      'Meetings are every Thursday at 6:00 PM. Bring a laptop and a friend.'),
 (3, 'Debugging night is almost full',   'Only a few seats are left. RSVP early or join the waitlist.'),
 (1, 'Hackathon teams',                  'Teams of up to four. You can also form one on the day.');
+
+INSERT INTO announcements (org_id, title, body, kind, closes_on) VALUES
+(3, 'Now recruiting: new members', 'We are open to every program. Tell us what you want to build in your application.', 'recruitment', DATE_ADD(CURDATE(), INTERVAL 30 DAY)),
+(1, 'Recruiting: event crew',      'Help run the Hackathon: registration desk, logistics and mentors.',                 'recruitment', DATE_ADD(CURDATE(), INTERVAL 14 DAY));
 
 -- notifications
 INSERT INTO notifications (user_id, message, is_read) VALUES

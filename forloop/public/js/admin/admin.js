@@ -3,6 +3,16 @@
   var $ = FL.$,
     $$ = FL.$$;
 
+  /* Recruitment posts get an optional closing date */
+  var anKind = $('#an_kind');
+  if (anKind) {
+    var syncKind = function () {
+      $('#an_closes').hidden = anKind.value !== 'recruitment';
+    };
+    anKind.addEventListener('change', syncKind);
+    syncKind();
+  }
+
   var evModal = $('#eventModal');
   if (evModal) {
     var f = $('#eventForm'),
@@ -56,6 +66,15 @@
     inp.addEventListener('input', function () {
       var t = $(inp.dataset.bind);
       if (t && !t.querySelector('img')) t.textContent = inp.value;
+    });
+  });
+
+  /* Brand color: recolor the preview banner as the swatch changes */
+  $$('[data-color-pick]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      var top = $('.pv-top');
+      if (!top) return;
+      top.className = top.className.replace(/\bc-\w+/, 'c-' + radio.value);
     });
   });
 

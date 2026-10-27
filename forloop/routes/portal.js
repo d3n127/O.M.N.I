@@ -360,6 +360,29 @@ function addSharedPages(router, { view, base }) {
     });
   }
 
+  /* Open recruitment calls from every organization, soonest deadline first */
+  function showRecruitment(req, res, next) {
+    const uid = req.session.user.id;
+
+    db.query(
+      `
+      SELECT a.*, o.name AS org_name, o.color, o.logo_img, o.logo_style,
+        (SELECT COUNT(*) FROM memberships m WHERE m.org_id = o.id AND m.user_id = ?) AS is_member,
+        (SELECT COUNT(*) FROM applications p WHERE p.org_id = o.id AND p.user_id = ? AND p.status = 'pending') AS is_pending
+      FROM announcements a JOIN organizations o ON o.id = a.org_id
+      WHERE a.kind = 'recruitment' AND (a.closes_on IS NULL OR a.closes_on >= CURDATE())
+      ORDER BY a.closes_on IS NULL, a.closes_on, a.created_at DESC`,
+      [uid, uid],
+      (err, posts) => {
+        if (err) {
+          return next(err);
+        }
+        res.render(`${view}/recruitment`, { title: 'Recruitment', active: 'recruitment', posts, base });
+      },
+    );
+  }
+
+  router.get('/recruitment', showRecruitment);
   router.get('/discover', showDiscover);
   router.post('/apply', applyToOrg);
   router.get('/events', showEvents);

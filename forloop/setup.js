@@ -13,7 +13,7 @@ CREATE TABLE organizations (
   category VARCHAR(40) NOT NULL DEFAULT 'Technology',
   tags VARCHAR(160) NOT NULL DEFAULT '',
   eligibility VARCHAR(100) NOT NULL DEFAULT 'International',
-  color ENUM('yellow','teal','lime','lilac') NOT NULL DEFAULT 'teal',
+  color ENUM('yellow','teal','lime','lilac','salmon','sky','rose','sand','black','red','brown','orange') NOT NULL DEFAULT 'teal',
   logo_img VARCHAR(120) NOT NULL DEFAULT 'OR',
   logo_style ENUM('tile','navy','cream','dark') NOT NULL DEFAULT 'dark',
   meeting_schedule VARCHAR(120) NOT NULL DEFAULT 'To be announced',
@@ -129,6 +129,8 @@ CREATE TABLE announcements (
   org_id INT NOT NULL,
   title VARCHAR(140) NOT NULL,
   body TEXT,
+  kind ENUM('update','recruitment') NOT NULL DEFAULT 'update',
+  closes_on DATE NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (org_id) REFERENCES organizations(id) ON DELETE CASCADE
 );
@@ -570,6 +572,15 @@ function seed(done) {
     ['F1', 'Hackathon teams', 'Teams of up to four. You can also form one on the day.'],
   ].forEach(([orgKey, title, body]) =>
     queue('INSERT INTO announcements (org_id,title,body) VALUES (?,?,?)', () => [ids[orgKey], title, body]),
+  );
+  [
+    ['UIPC', 'Now recruiting: new members', 'We are open to every program. Tell us what you want to build in your application.', 30],
+    ['F1', 'Recruiting: event crew', 'Help run the Hackathon: registration desk, logistics and mentors.', 14],
+  ].forEach(([orgKey, title, body, days]) =>
+    queue(
+      "INSERT INTO announcements (org_id,title,body,kind,closes_on) VALUES (?,?,?,'recruitment',DATE_ADD(CURDATE(), INTERVAL ? DAY))",
+      () => [ids[orgKey], title, body, days],
+    ),
   );
 
   /* ----- Notifications ----- */

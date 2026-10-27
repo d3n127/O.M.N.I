@@ -48,6 +48,7 @@ function getAnnouncements(uid, limit, done) {
     FROM announcements a
     JOIN memberships m ON m.org_id = a.org_id AND m.user_id = ?
     JOIN organizations o ON o.id = a.org_id
+    WHERE a.kind = 'update'
     ORDER BY a.created_at DESC, a.id DESC LIMIT ?`,
     [uid, limit],
     done,
@@ -164,7 +165,12 @@ function showMyOrganizations(req, res, next) {
       if (err) {
         return next(err);
       }
-      res.render('student/organizations', { title: 'My organizations', active: 'orgs', mine });
+      getAnnouncements(req.session.user.id, 6, (err, announcements) => {
+        if (err) {
+          return next(err);
+        }
+        res.render('student/organizations', { title: 'My Organization', active: 'orgs', mine, announcements });
+      });
     },
   );
 }

@@ -1,0 +1,25 @@
+<p class="eyebrow">Join a community</p>
+<h1 class="page-title">Recruitment</h1>
+<p class="lead">Organizations that are looking for new members right now.</p>
+
+<% if (!posts.length) { %>
+  <div class="card empty-card"><h3>No open recruitment right now.</h3><p>When an organization starts recruiting, it will show up here. <a class="underline" href="<%= base %>/discover">Browse organizations</a>.</p></div>
+<% } %>
+<div class="news-grid wide">
+  <% posts.forEach(function (a) { %>
+    <article class="news c-<%= a.color %>">
+      <p class="eyebrow"><%= a.org_name %> · <%= a.closes_on ? 'Closes ' + fmtShort(a.closes_on) : 'Open until filled' %></p>
+      <h3><%= a.title %></h3>
+      <% if (a.body) { %><p><%= a.body %></p><% } %>
+      <div class="news-foot">
+        <% if (a.is_member) { %>
+          <span class="news-status">You’re already a member</span>
+        <% } else if (a.is_pending) { %>
+          <span class="news-status">Application in review</span>
+        <% } else { %>
+          <a class="btn dark small" href="<%= base %>/discover?q=<%= encodeURIComponent(a.org_name) %>">View &amp; apply <%- icon('arrow', 16) %></a>
+        <% } %>
+      </div>
+    </article>
+  <% }) %>
+</div>

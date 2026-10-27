@@ -1,10 +1,9 @@
 <% var shell = locals.portal || 'nonmember'; %>
 <%- include('../' + shell + '/partials/top') %>
-<p class="eyebrow">Account setup</p>
-<h1 class="page-title">Student information</h1>
-<p class="lead">One last step — tell us about yourself as a student before using the portal.</p>
-
 <div class="si-wrap">
+  <p class="eyebrow">Account setup</p>
+  <h1 class="page-title">Student information</h1>
+  <p class="lead">One last step — tell us about yourself as a student before using the portal.</p>
   <% if (error) { %><p class="form-error show"><%= error %></p><% } %>
   <form class="card pf-card" method="post" action="/student-info">
     <label for="s_id">Student ID</label>

@@ -533,6 +533,7 @@ label.upload-btn {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 20px;
+  align-items: start;
 }
 .pf-card h2 {
   font-size: 22px;
@@ -540,6 +541,11 @@ label.upload-btn {
 }
 .si-wrap {
   max-width: 560px;
+  margin: 0 auto;
+  text-align: center;
+}
+.si-wrap .pf-card {
+  text-align: left;
 }
 .pf-card .btn {
   margin-top: 24px;
@@ -815,18 +821,30 @@ label.upload-btn {
 .dd-menu a:hover {
   background: var(--bg);
 }
+.dd-menu.notes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dd-menu.notes[hidden] {
+  display: none;
+}
 .note {
   padding: 10px 12px;
   border-radius: 10px;
+  border-left: 3px solid transparent;
 }
 .note.new {
   background: #fff6dc;
+  border-left-color: var(--yellow);
 }
 [data-theme='dark'] .note.new {
-  background: #3d3417;
+  background: rgba(244, 201, 60, 0.12);
 }
 .note p {
   font-size: 13.5px;
+  line-height: 1.4;
+  margin: 0 0 4px;
 }
 .note small {
   color: var(--muted);
@@ -890,6 +908,77 @@ label.upload-btn {
 }
 .c-lilac {
   background: var(--lilac);
+}
+.c-salmon {
+  background: var(--salmon);
+}
+.c-sky {
+  background: #9cc9ee;
+}
+.c-rose {
+  background: #f0b3c8;
+}
+.c-sand {
+  background: #e6d3a8;
+}
+.c-orange {
+  background: #f58a2e;
+}
+/* Dark banners switch to light text so titles and buttons stay readable */
+.c-black {
+  background: #1a1d1c;
+  --on-tile: #f4f3ee;
+}
+.c-red {
+  background: #d63b33;
+  --on-tile: #fff;
+}
+.c-brown {
+  background: #7a4b2d;
+  --on-tile: #fff;
+}
+.c-black .eyebrow,
+.c-red .eyebrow,
+.c-brown .eyebrow {
+  color: inherit;
+  opacity: 0.75;
+}
+.swatch.c-black {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 4px 0 8px;
+}
+.swatch {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  margin: 0;
+}
+.swatch input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.swatch span {
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  pointer-events: none;
+}
+.swatch input:checked + span {
+  border-color: var(--ink);
+}
+.swatch input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .logo-badge {
   width: 70px;

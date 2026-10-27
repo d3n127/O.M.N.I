@@ -1,6 +1,6 @@
 <%- include('partials/top') %>
 <p class="eyebrow">Your communities</p>
-<h1 class="page-title">My organizations</h1>
+<h1 class="page-title">My Organization</h1>
 <p class="lead">The groups you belong to and everything happening inside them.</p>
 
 <% if (!mine.length) { %>
@@ -20,4 +20,23 @@
     </div>
   </section>
 <% }) %>
+
+<% if (mine.length) { %>
+  <div class="block-head ev-section">
+    <div><p class="eyebrow">From your organizations</p><h2>Announcements</h2></div>
+    <a class="more" href="/student/announcements">See all <%- icon('arrow', 18) %></a>
+  </div>
+  <% if (!announcements.length) { %>
+    <div class="card empty-card"><h3>Nothing yet.</h3><p>When your organizations post an update, it will show up here.</p></div>
+  <% } %>
+  <div class="news-grid wide">
+    <% announcements.forEach(function (a) { %>
+      <article class="news c-<%= a.color %>">
+        <p class="eyebrow"><%= a.org_name %> · <%= fmtShort(a.created_at) %></p>
+        <h3><%= a.title %></h3>
+        <% if (a.body) { %><p><%= a.body %></p><% } %>
+      </article>
+    <% }) %>
+  </div>
+<% } %>
 <%- include('partials/bottom') %>

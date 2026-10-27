@@ -2,7 +2,7 @@
 <header class="topbar">
   <%- include('../../shared/logo') %>
   <nav class="topnav">
-    <% [['home','/nonmember','grid','Home'],['discover','/nonmember/discover','compass','Discover'],['events','/nonmember/events','calendar','Events']].forEach(function (n) { %>
+    <% [['home','/nonmember','grid','Home'],['discover','/nonmember/discover','compass','Discover'],['events','/nonmember/events','calendar','Events'],['recruitment','/nonmember/recruitment','spark','Recruitment']].forEach(function (n) { %>
       <a href="<%= n[1] %>" class="<%= locals.active === n[0] ? 'on' : '' %>"><%- icon(n[2], 18) %><%= n[3] %></a>
     <% }) %>
   </nav>

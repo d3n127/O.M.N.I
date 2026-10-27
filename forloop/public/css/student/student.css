@@ -812,6 +812,20 @@
   border-radius: 22px;
   padding: 24px 26px;
   color: var(--on-tile);
+  display: flex;
+  flex-direction: column;
+}
+.news-foot {
+  margin-top: auto;
+  padding-top: 18px;
+}
+.news-status {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
 }
 .news h3 {
   font-size: 22px;

@@ -3,18 +3,27 @@
   <div>
     <p class="eyebrow">Communication</p>
     <h1 class="page-title">Announcements</h1>
-    <p class="lead">Post an update for every member of <%= org.name %>. They get a notification and see it on their home page.</p>
+    <p class="lead">Update your members, or post a recruitment call that every student can see and apply to.</p>
   </div>
 </div>
 
 <div class="card">
   <h2>New announcement</h2>
   <form method="post" action="/admin/announcements" class="form">
+    <label for="an_kind">Post type</label>
+    <select id="an_kind" name="kind">
+      <option value="update">Member update: notifies your members</option>
+      <option value="recruitment">Recruitment: public, students can apply</option>
+    </select>
     <label for="an_title">Title</label>
     <input id="an_title" name="title" maxlength="140" required placeholder="e.g. Meeting moved to Friday">
     <label for="an_body">Message <span class="opt">(optional)</span></label>
     <textarea id="an_body" name="body" rows="4" maxlength="2000" placeholder="Add the details members need."></textarea>
-    <button class="btn" type="submit">Post to members <%- icon('arrow', 18) %></button>
+    <div id="an_closes" hidden>
+      <label for="an_closes_on">Applications close on <span class="opt">(optional)</span></label>
+      <input id="an_closes_on" name="closes_on" type="date">
+    </div>
+    <button class="btn" type="submit">Post announcement <%- icon('arrow', 18) %></button>
   </form>
 </div>
 
@@ -24,7 +33,7 @@
   <div class="app-admin">
     <div class="who2" style="flex:1">
       <strong><%= a.title %></strong>
-      <small class="blue">Posted <%= fmtShort(a.created_at) %></small>
+      <small class="blue"><%= a.kind === 'recruitment' ? 'Recruitment' : 'Member update' %> · Posted <%= fmtShort(a.created_at) %><%= a.closes_on ? ' · Closes ' + fmtShort(a.closes_on) : '' %></small>
       <% if (a.body) { %><p class="an-body"><%= a.body %></p><% } %>
     </div>
     <form method="post" action="/admin/announcements/<%= a.id %>/delete" data-confirm="Delete this announcement?"><button class="btn outline small">Delete</button></form>

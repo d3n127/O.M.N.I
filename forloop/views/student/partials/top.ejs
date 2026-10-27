@@ -2,7 +2,7 @@
 <header class="topbar">
   <%- include('../../shared/logo') %>
   <nav class="topnav">
-    <% [['home','/student','grid','Home'],['discover','/student/discover','compass','Discover'],['applications','/student/applications','file','Applications'],['events','/student/events','calendar','Events'],['orgs','/student/organizations','userplus','My organizations']].forEach(function (n) { %>
+    <% [['home','/student','grid','Home'],['discover','/student/discover','compass','Discover'],['applications','/student/applications','file','Applications'],['events','/student/events','calendar','Events'],['recruitment','/student/recruitment','spark','Recruitment'],['orgs','/student/organizations','userplus','My Organization']].forEach(function (n) { %>
       <a href="<%= n[1] %>" class="<%= locals.active === n[0] ? 'on' : '' %>"><%- icon(n[2], 18) %><%= n[3] %><% if (n[0] === 'applications' && badge > 0) { %><span class="count"><%= badge %></span><% } %></a>
     <% }) %>
   </nav>

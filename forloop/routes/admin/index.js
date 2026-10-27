@@ -6,7 +6,7 @@
  */
 const express = require('express');
 const db = require('../../conn');
-const { MON, DEPT_NAMES, flash, text, cleanEmail, ymd, parallel } = require('../../utils');
+const { MON, DEPT_NAMES, ORG_COLORS, flash, text, cleanEmail, ymd, parallel } = require('../../utils');
 const { requireRole } = require('../auth');
 const { UPCOMING } = require('../portal');
 const { parseProgram, programToText, saveProgram, attachProgram } = require('../program');
@@ -299,6 +299,7 @@ function showOrganization(req, res, next) {
         memberCount: rows[0].c,
         categories: CATEGORIES,
         departments: DEPT_NAMES,
+        colors: ORG_COLORS,
       });
     },
   );
@@ -321,14 +322,17 @@ function saveOrganization(req, res, next) {
     ? res.locals.org.logo_img
     : text(req.body.logo_text, 4) || name.slice(0, 2).toUpperCase();
 
+  const color = ORG_COLORS.includes(req.body.color) ? req.body.color : res.locals.org.color;
+
   db.query(
-    'UPDATE organizations SET name = ?, description = ?, category = ?, tags = ?, eligibility = ?, logo_img = ?, meeting_schedule = ? WHERE id = ?',
+    'UPDATE organizations SET name = ?, description = ?, category = ?, tags = ?, eligibility = ?, color = ?, logo_img = ?, meeting_schedule = ? WHERE id = ?',
     [
       name,
       text(req.body.description),
       category,
       text(req.body.tags, 160),
       eligibility,
+      color,
       logo,
       text(req.body.meeting_schedule) || 'To be announced',
       res.locals.org.id,
@@ -1025,17 +1029,25 @@ function createAnnouncement(req, res, next) {
   const { org } = res.locals;
   const title = text(req.body.title, 140);
   const body = text(req.body.body, 2000);
+  const kind = req.body.kind === 'recruitment' ? 'recruitment' : 'update';
+  const closesOn = /^\d{4}-\d{2}-\d{2}$/.test(req.body.closes_on || '') ? req.body.closes_on : null;
   if (!title) {
     flash(req, 'Give the announcement a title.', 'err');
     return res.redirect('/admin/announcements');
   }
 
   db.query(
-    'INSERT INTO announcements (org_id, title, body) VALUES (?,?,?)',
-    [org.id, title, body],
+    'INSERT INTO announcements (org_id, title, body, kind, closes_on) VALUES (?,?,?,?,?)',
+    [org.id, title, body, kind, kind === 'recruitment' ? closesOn : null],
     (err) => {
       if (err) {
         return next(err);
+      }
+
+      /* Recruitment posts are public, so members (who already belong) are not notified */
+      if (kind === 'recruitment') {
+        flash(req, 'Recruitment post published. Every student can see it on the Recruitment page.');
+        return res.redirect('/admin/announcements');
       }
       db.query(
         'INSERT INTO notifications (user_id, message) SELECT user_id, ? FROM memberships WHERE org_id = ?',

@@ -36,6 +36,12 @@
     <label class="btn upload-btn">Upload logo
       <input type="file" accept="image/jpeg,image/png,image/webp" data-upload="/upload/org-logo" data-preview="#pvLogo" hidden>
     </label>
+    <label>Brand color <small>(used on your banners, announcements and cards)</small></label>
+    <div class="swatches" role="radiogroup" aria-label="Brand color">
+      <% colors.forEach(function (c) { %>
+        <label class="swatch c-<%= c %>" title="<%= c %>"><input type="radio" name="color" value="<%= c %>" <%= c === org.color ? 'checked' : '' %> data-color-pick><span></span></label>
+      <% }) %>
+    </div>
     <label for="o_meet">Meeting schedule</label>
     <input id="o_meet" name="meeting_schedule" value="<%= org.meeting_schedule %>">
   </form>

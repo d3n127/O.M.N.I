@@ -229,7 +229,11 @@ const viewHelpers = {
   deptAbbr,
 };
 
+/* Banner colors an organization can pick; each has a matching .c-<name> class in base.css */
+const ORG_COLORS = ['yellow', 'teal', 'lime', 'lilac', 'salmon', 'sky', 'rose', 'sand', 'black', 'red', 'brown', 'orange'];
+
 module.exports = {
+  ORG_COLORS,
   hashPassword,
   verifyPassword,
   ymd,

@@ -18,11 +18,11 @@ const {
   cleanEmail,
   EMAIL_PATTERN,
   ROLES,
+  ORG_COLORS,
 } = require('../utils');
 
 const router = express.Router();
 const DEMO = 'maya@north.edu (student) · admin@codecraft.edu (adviser) — password "password"';
-const ORG_COLORS = ['yellow', 'teal', 'lime', 'lilac'];
 
 /* ---------- Helpers ---------- */
 

@@ -924,6 +924,13 @@ label.upload-btn {
 .c-orange {
   background: #f58a2e;
 }
+.c-white {
+  background: #fff;
+  --on-tile: #173d3a;
+}
+.swatch.c-white {
+  box-shadow: inset 0 0 0 1px rgba(23, 61, 58, 0.25);
+}
 /* Dark banners switch to light text so titles and buttons stay readable */
 .c-black {
   background: #1a1d1c;

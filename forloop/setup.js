@@ -13,7 +13,7 @@ CREATE TABLE organizations (
   category VARCHAR(40) NOT NULL DEFAULT 'Technology',
   tags VARCHAR(160) NOT NULL DEFAULT '',
   eligibility VARCHAR(100) NOT NULL DEFAULT 'International',
-  color ENUM('yellow','teal','lime','lilac','salmon','sky','rose','sand','black','red','brown','orange') NOT NULL DEFAULT 'teal',
+  color ENUM('yellow','teal','lime','lilac','salmon','sky','rose','sand','black','red','brown','orange','white') NOT NULL DEFAULT 'teal',
   logo_img VARCHAR(120) NOT NULL DEFAULT 'OR',
   logo_style ENUM('tile','navy','cream','dark') NOT NULL DEFAULT 'dark',
   meeting_schedule VARCHAR(120) NOT NULL DEFAULT 'To be announced',

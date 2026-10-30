@@ -1,0 +1,45 @@
+<%- include('partials/top') %>
+<div class="page-head">
+  <div>
+    <p class="eyebrow">Organization profile</p>
+    <h1 class="page-title">Manage organization</h1>
+    <p class="lead">Keep your public information clear, current, and inviting.</p>
+  </div>
+  <button class="btn" type="submit" form="orgForm">Save changes</button>
+</div>
+
+<div class="org-edit">
+  <form class="card form" id="orgForm" method="post" action="/admin/organization">
+    <h2>Public information</h2>
+    <label for="o_name">Organization name</label>
+    <input id="o_name" name="name" value="<%= org.name %>" required data-bind="#pvName">
+    <label for="o_desc">Short description</label>
+    <textarea id="o_desc" name="description" rows="4" data-bind="#pvDesc"><%= org.description %></textarea>
+    <label for="o_cat">Primary category</label>
+    <select id="o_cat" name="category">
+      <% categories.forEach(function (c) { %><option <%= c === org.category ? 'selected' : '' %>><%= c %></option><% }) %>
+    </select>
+    <label for="o_elig">Who can join</label>
+    <select id="o_elig" name="eligibility">
+      <option value="International" <%= org.eligibility === 'International' ? 'selected' : '' %>>International — any department can join</option>
+      <% departments.forEach(function (d) { %>
+        <option value="<%= d %>" <%= org.eligibility === d ? 'selected' : '' %>><%= d %> (<%= deptAbbr(d) %>) only</option>
+      <% }) %>
+    </select>
+    <label for="o_tags">Tags <small>(comma separated)</small></label>
+    <input id="o_tags" name="tags" value="<%= org.tags %>" placeholder="All code, Community">
+    <label for="o_logo">Logo text <small>(2–3 characters)</small></label>
+    <input id="o_logo" name="logo_text" value="<%= org.logo_text %>" maxlength="4" data-bind="#pvLogo">
+    <label for="o_meet">Meeting schedule</label>
+    <input id="o_meet" name="meeting_schedule" value="<%= org.meeting_schedule %>">
+  </form>
+
+  <aside class="card preview">
+    <p class="eyebrow">Live preview</p>
+    <div class="pv-top c-<%= org.color %>"><span class="logo-badge lb-<%= org.logo_style %>" id="pvLogo"><%= org.logo_text %></span></div>
+    <h3 id="pvName"><%= org.name %></h3>
+    <p id="pvDesc"><%= org.description %></p>
+    <strong><%= memberCount %> member<%= memberCount == 1 ? '' : 's' %></strong>
+  </aside>
+</div>
+<%- include('partials/bottom') %>

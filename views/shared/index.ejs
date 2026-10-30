@@ -1,0 +1,135 @@
+<%- include('head', { title: 'Welcome', bodyClass: 'lp' }) %>
+
+<header class="lp-nav">
+  <div class="lp-wrap lp-nav-in">
+    <%- include('logo') %>
+    <nav class="lp-links" aria-label="Page sections">
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#choose">Choose your portal</a>
+    </nav>
+    <div class="lp-nav-act">
+      <button class="round theme-btn" type="button" data-theme-toggle aria-label="Switch between light and dark theme">
+        <span class="th-ic"><%- icon('sun', 18, 'th-sun') %><%- icon('moon', 18, 'th-moon') %></span>
+      </button>
+      <a class="btn small outline" href="#choose">Sign in</a>
+      <a class="btn small" href="#choose">Get started</a>
+    </div>
+  </div>
+</header>
+
+<section class="lp-hero">
+  <div class="sun-wrap" aria-hidden="true"><i class="orbit o2"></i><i class="orbit o1"></i><i class="halo"></i><i class="sun"></i></div>
+  <div class="lp-wrap lp-hero-in">
+    <p class="eyebrow">Student organization portal</p>
+    <h1>Your campus.<br>Your community.</h1>
+    <p class="lp-sub">Find the organizations that fit you, apply in one place, and keep up with every event — while officers get the tools to run it all.</p>
+    <div class="lp-cta">
+      <a class="btn lp-primary" href="/login/student">I’m a student <%- icon('arrow', 18) %></a>
+      <a class="btn lp-ghost" href="/login/admin">I run an organization <%- icon('arrow', 18) %></a>
+    </div>
+    <p class="lp-note">Two portals, two roles. Students discover, apply and RSVP. Officers manage members, applications, events and reports.</p>
+  </div>
+</section>
+
+<section class="lp-sec" id="features">
+  <div class="lp-wrap">
+    <p class="eyebrow">What you can do</p>
+    <h2 class="lp-h2">Everything campus life needs, in one place.</h2>
+    <div class="lp-grid">
+      <article class="lp-feat">
+        <span class="lp-ic c-yellow"><%- icon('compass', 24) %></span>
+        <h3>Discover organizations</h3>
+        <p>Browse every campus community by category, eligibility and meeting schedule.</p>
+      </article>
+      <article class="lp-feat">
+        <span class="lp-ic c-teal"><%- icon('file', 24) %></span>
+        <h3>Apply in one place</h3>
+        <p>Send one introduction, then watch every application’s status as officers review it.</p>
+      </article>
+      <article class="lp-feat">
+        <span class="lp-ic c-lime"><%- icon('calendar', 24) %></span>
+        <h3>Never miss an event</h3>
+        <p>RSVP to meetings and campus events, with the details waiting in your portal.</p>
+      </article>
+      <article class="lp-feat">
+        <span class="lp-ic c-lilac"><%- icon('chart', 24) %></span>
+        <h3>Run your organization</h3>
+        <p>Officers approve members, publish events and export reports in a few clicks.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="lp-sec lp-how" id="how">
+  <div class="lp-wrap">
+    <p class="eyebrow">How it works</p>
+    <h2 class="lp-h2">Three steps from sign-up to belonging.</h2>
+    <div class="lp-steps">
+      <article class="lp-step">
+        <b>1</b>
+        <h3>Pick your portal</h3>
+        <p>Students and organization officers sign in through their own door, so you always land in the right place.</p>
+      </article>
+      <article class="lp-step">
+        <b>2</b>
+        <h3>Set up your information</h3>
+        <p>A short, one-time student information form unlocks the full student portal.</p>
+      </article>
+      <article class="lp-step">
+        <b>3</b>
+        <h3>Discover, apply, belong</h3>
+        <p>Join organizations, track your applications and RSVP to events — all from one dashboard.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<section class="lp-sec lp-choose" id="choose">
+  <div class="lp-wrap">
+    <p class="eyebrow">Get started</p>
+    <h2 class="lp-h2">Choose how you’ll use O.M.N.I</h2>
+    <p class="lp-lead">Your role decides which portal you land in — and which tools you can reach.</p>
+    <div class="role-grid lp-roles">
+      <a class="role r-yellow" href="/login/student">
+        <span class="role-ic"><%- icon('userplus', 26) %></span>
+        <strong>I’m a student</strong>
+        <small>Find organizations, apply, and join events.</small>
+        <span class="go"><%- icon('arrow', 20) %></span>
+      </a>
+      <a class="role r-navy" href="/login/admin">
+        <span class="role-ic"><%- icon('building', 26) %></span>
+        <strong>I run an organization</strong>
+        <small>Manage members, applications, events and reports.</small>
+        <span class="go"><%- icon('arrow', 20) %></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer class="lp-foot">
+  <div class="lp-wrap lp-foot-in">
+    <div class="lp-foot-brand">
+      <%- include('logo', { light: true }) %>
+      <p>One portal for campus organizations and the students who join them.</p>
+    </div>
+    <div class="lp-foot-col">
+      <h4>Portals</h4>
+      <a href="/login/student">Student sign in</a>
+      <a href="/login/admin">Organization sign in</a>
+      <a href="/login/student?mode=register">Create an account</a>
+    </div>
+    <div class="lp-foot-col">
+      <h4>Explore</h4>
+      <a href="#features">Features</a>
+      <a href="#how">How it works</a>
+      <a href="#choose">Choose your portal</a>
+    </div>
+  </div>
+  <div class="lp-wrap lp-foot-bot">
+    <span>O.M.N.I · student organization portal</span>
+    <span>Built for campus communities</span>
+  </div>
+</footer>
+
+<%- include('foot') %>

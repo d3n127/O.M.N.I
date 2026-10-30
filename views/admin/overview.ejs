@@ -1,0 +1,76 @@
+<%- include('partials/top') %>
+<div class="page-head">
+  <div>
+    <p class="eyebrow"><%= today %></p>
+    <h1 class="page-title"><%= greeting %>, <%= firstName %>.</h1>
+    <p class="lead">Here’s what’s happening with <%= org.name %> today.</p>
+  </div>
+  <a class="btn" href="/admin/events?new=1"><%- icon('plus', 18) %> Create event</a>
+</div>
+
+<section class="kpis">
+  <div class="kpi"><small>Total members</small><strong><%= stats.members %></strong><span>+<%= stats.fresh %> this month</span></div>
+  <div class="kpi"><small>Pending applications</small><strong><%= stats.pending %></strong><span>Needs review</span></div>
+  <div class="kpi"><small>Upcoming events</small><strong><%= stats.upcoming %></strong><span><%= stats.upcomingRsvps %> total RSVPs</span></div>
+  <div class="kpi"><small>Avg. attendance</small><strong><%= stats.attendance %>%</strong><span>RSVPs per published event</span></div>
+</section>
+
+<section class="split">
+  <div class="card">
+    <p class="eyebrow">Recruitment</p>
+    <div class="block-head tight"><h2>Recent applications</h2><a class="underline" href="/admin/applications">Review all</a></div>
+    <% if (!recent.length) { %><p class="empty">No applications yet. Students apply from the Discover page.</p><% } %>
+    <% recent.forEach(function (a) { %>
+      <a class="person-row" href="/admin/applications">
+        <span class="av"><%= initials(a.full_name) %></span>
+        <div><strong><%= a.full_name %></strong><small><%= a.student_id ? 'ID ' + a.student_id + ' · ' : '' %><%= a.program %> · Year <%= a.year_level %></small></div>
+        <small class="when"><%= fmtShort(a.created_at) %></small>
+        <span class="round"><%- icon('arrow', 18) %></span>
+      </a>
+    <% }) %>
+  </div>
+
+  <div class="pulse">
+    <p class="eyebrow">Community pulse</p>
+    <h2><%= stats.score >= 60 ? 'Engagement is up' : 'Room to grow' %></h2>
+    <div class="score"><b><%= stats.score %></b><span>/ 100</span></div>
+    <p>Based on event attendance, application acceptance and member satisfaction.</p>
+    <a href="/admin/reports">See full report <%- icon('arrow', 16) %></a>
+  </div>
+</section>
+
+<section class="feature">
+  <% if (featured) { %>
+    <span class="date-tile yellow"><small><%= fmtMon(featured.event_date) %></small><b><%= fmtDay(featured.event_date) %></b></span>
+    <div class="grow"><p class="eyebrow">Featured event</p><h3><%= featured.title %></h3><small><%= fmtTime(featured.event_time) %> · <%= featured.location %></small></div>
+    <div class="faces">
+      <% going.forEach(function (g) { %><span class="av sm"><%= initials(g.full_name) %></span><% }) %>
+      <% if (goingCount > going.length) { %><small>+<%= goingCount - going.length %></small><% } %>
+    </div>
+    <a class="btn outline small" href="/admin/events">Manage event <%- icon('arrow', 16) %></a>
+  <% } else { %>
+    <div class="grow"><p class="eyebrow">Featured event</p><h3>Nothing scheduled</h3><small>Create an event to give members something to join.</small></div>
+    <a class="btn small" href="/admin/events?new=1">Create event</a>
+  <% } %>
+</section>
+
+<section class="up-next">
+  <div class="block-head">
+    <div><p class="eyebrow">Your calendar</p><h2>Upcoming events</h2></div>
+  </div>
+  <% if (!upcoming.length) { %>
+    <div class="ev-admin">
+      <div class="grow"><h3>Nothing scheduled yet</h3><small>Create an event to give members something to join.</small></div>
+      <a class="btn small" href="/admin/events?new=1">Create event <%- icon('plus', 16) %></a>
+    </div>
+  <% } %>
+  <% var tiles = ['yellow','teal','lime','lilac']; upcoming.forEach(function (e, i) { %>
+    <div class="ev-admin">
+      <span class="date-tile <%= tiles[i % 4] %>"><small><%= fmtMon(e.event_date) %></small><b><%= fmtDay(e.event_date) %></b></span>
+      <div class="grow"><h3><%= e.title %></h3><small><%= fmtTime(e.event_time) %> · <%= e.location %></small></div>
+      <div class="rsvp"><strong><%= e.rsvps %></strong><small>RSVPs</small></div>
+      <a class="btn outline small" href="/admin/events">Manage <%- icon('arrow', 16) %></a>
+    </div>
+  <% }) %>
+</section>
+<%- include('partials/bottom') %>

@@ -1,0 +1,45 @@
+<% var shell = locals.portal || 'nonmember'; %>
+<%- include('../' + shell + '/partials/top') %>
+<p class="eyebrow">Account setup</p>
+<h1 class="page-title">Student information</h1>
+<p class="lead">One last step — tell us about yourself as a student before using the portal.</p>
+
+<div class="si-wrap">
+  <% if (error) { %><p class="form-error show"><%= error %></p><% } %>
+  <form class="card pf-card" method="post" action="/student-info">
+    <label for="s_id">Student ID</label>
+    <input id="s_id" name="student_id" placeholder="e.g. 2024-12345" required maxlength="24" value="<%= values.student_id || '' %>">
+    <label for="s_program">Program (course)</label>
+    <select id="s_program" name="program" required>
+      <% var spv = values.program || ''; if (spv && programs.indexOf(spv) === -1) { %>
+        <option value="<%= spv %>" selected><%= spv %></option>
+      <% } %>
+      <% programs.forEach(function (p) { %>
+        <option value="<%= p %>" <%= spv === p ? 'selected' : '' %>><%= p %></option>
+      <% }) %>
+    </select>
+    <label for="s_year">Year level</label>
+    <select id="s_year" name="year_level" required>
+      <% [1, 2, 3, 4].forEach(function (y) { %>
+        <option value="<%= y %>" <%= Number(values.year_level) === y ? 'selected' : '' %>>Year <%= y %></option>
+      <% }) %>
+    </select>
+    <label for="s_contact">Contact number</label>
+    <input id="s_contact" name="contact" type="tel" placeholder="e.g. 0917 123 4567" required maxlength="30" value="<%= values.contact || '' %>">
+    <label for="s_college">Department (college / faculty)</label>
+    <select id="s_college" name="college" required>
+      <% var scv = values.college || ''; if (scv && departments.indexOf(scv) === -1) { %>
+        <option value="<%= scv %>" selected><%= scv %></option>
+      <% } %>
+      <% departments.forEach(function (d) { %>
+        <option value="<%= d %>" <%= scv === d ? 'selected' : '' %>><%= d %> (<%= deptAbbr(d) %>)</option>
+      <% }) %>
+    </select>
+    <label for="s_bio">Short bio <small>(up to 300 characters)</small></label>
+    <textarea id="s_bio" name="bio" rows="3" maxlength="300" required placeholder="A sentence or two about yourself"><%= values.bio || '' %></textarea>
+    <label for="s_hobbies">Hobbies <small>(optional, comma separated — e.g. Chess, Basketball, Painting)</small></label>
+    <input id="s_hobbies" name="hobbies" maxlength="300" placeholder="Chess, Basketball, Painting" value="<%= values.hobbies || '' %>">
+    <button class="btn" type="submit">Save and continue <%- icon('arrow', 18) %></button>
+  </form>
+</div>
+<%- include('../' + shell + '/partials/bottom') %>

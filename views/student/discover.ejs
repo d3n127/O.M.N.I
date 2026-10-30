@@ -1,0 +1,26 @@
+<%- include('partials/top') %>
+<p class="eyebrow">Explore campus</p>
+<h1 class="page-title">Discover organizations</h1>
+<p class="lead"><%= q ? 'Results for “' + q + '”. ' : '' %>Find a community built around what you care about.</p>
+
+<div class="chips" data-filter>
+  <button class="on" data-cat="all">All</button>
+  <% cats.forEach(function (c) { %><button data-cat="<%= c %>"><%= c %></button><% }) %>
+</div>
+<% var eligCats = [...new Set(orgs.map(function (o) { return o.eligibility || 'International'; }))].sort(function (a, b) { return a === 'International' ? -1 : b === 'International' ? 1 : a.localeCompare(b); }); %>
+<% if (eligCats.length > 1 || eligCats[0] !== 'International') { %>
+<div class="chips" data-filter>
+  <button class="on" data-elig="all">All departments</button>
+  <% eligCats.forEach(function (e) { %><button data-elig="<%= e %>"><%= e === 'International' ? 'International' : deptAbbr(e) + ' only' %></button><% }) %>
+</div>
+<% } %>
+
+<% if (!orgs.length) { %>
+  <div class="card empty-card"><h3>No organizations match “<%= q %>”.</h3><p>Try a different word, or <a class="underline" href="/student/discover">see everything</a>.</p></div>
+<% } %>
+<div class="org-grid">
+  <% orgs.forEach(function (o) { %><%- include('partials/orgcard', { o: o }) %><% }) %>
+</div>
+
+<%- include('partials/apply_modal') %>
+<%- include('partials/bottom') %>

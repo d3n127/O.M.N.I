@@ -1,0 +1,59 @@
+<%- include('head', { title: 'Sign in', bodyClass: 'auth t-auth' }) %>
+<div class="auth-decor" aria-hidden="true"><div class="sun-wrap"><i class="orbit o2"></i><i class="orbit o1"></i><i class="halo"></i><i class="sun"></i></div></div>
+<section class="auth-card" data-mode="<%= mode %>" data-type="<%= type %>" id="authCard">
+  <a class="back" href="/">← Back to home</a>
+  <%- include('logo') %>
+  <p class="eyebrow">One account · every portal</p>
+  <h1 id="authTitle"><%= mode === 'register' ? 'Create your space.' : 'Welcome back.' %></h1>
+  <p class="sub" id="authSub"><%= mode === 'register' ? 'Join the community and start making an impact.' : 'Sign in once — your role decides which portal opens.' %></p>
+
+  <div class="tabs" role="tablist">
+    <button type="button" data-tab="login" class="<%= mode === 'login' ? 'on' : '' %>" role="tab">Sign in</button>
+    <button type="button" data-tab="register" class="<%= mode === 'register' ? 'on' : '' %>" role="tab">Create account</button>
+  </div>
+
+  <% if (error) { %><p class="form-error show"><%= error %></p><% } %>
+
+  <% /* one form for owners, members and students alike — no portal picker to get wrong */ %>
+  <form method="post" action="/auth/login" id="loginForm" <%= mode === 'register' ? 'hidden' : '' %>>
+    <label for="l_email">University email</label>
+    <input id="l_email" type="email" name="email" placeholder="you@university.edu" required value="<%= values.email || '' %>" autocomplete="email">
+    <label for="l_pw">Password</label>
+    <input id="l_pw" type="password" name="password" placeholder="Your password" required autocomplete="current-password">
+    <button class="btn block" type="submit">Sign in <%- icon('arrow', 18) %></button>
+    <p class="hint">Owner, member or student — same form. Your role picks your portal.</p>
+    <p class="hint">Demo — <%= demo %></p>
+  </form>
+
+  <form method="post" action="/auth/register" id="registerForm" <%= mode === 'login' ? 'hidden' : '' %>>
+    <fieldset class="type-picker">
+      <legend>I am a…</legend>
+      <div class="type-chips">
+        <label class="chip">
+          <input type="radio" name="account_type" value="student" <%= type === 'student' ? 'checked' : '' %>>
+          <span>Student</span>
+        </label>
+        <label class="chip">
+          <input type="radio" name="account_type" value="owner" <%= type === 'owner' ? 'checked' : '' %>>
+          <span>I run an organization</span>
+        </label>
+      </div>
+    </fieldset>
+    <label for="r_name">Full name</label>
+    <input id="r_name" name="full_name" placeholder="Your full name" required value="<%= values.full_name || '' %>" autocomplete="name">
+    <label for="r_email">University email</label>
+    <input id="r_email" type="email" name="email" placeholder="you@university.edu" required value="<%= values.email || '' %>" autocomplete="email">
+    <label for="r_pw">Password</label>
+    <input id="r_pw" type="password" name="password" placeholder="At least 6 characters" required minlength="6" autocomplete="new-password">
+    <div id="orgField" <%= type === 'owner' ? '' : 'hidden' %>>
+      <label for="r_org">Organization name</label>
+      <input id="r_org" name="org_name" placeholder="e.g. UIPC" value="<%= values.org_name || '' %>" <%= type === 'owner' ? 'required' : '' %>>
+    </div>
+    <button class="btn block" type="submit">Create account <%- icon('arrow', 18) %></button>
+    <p class="hint" id="typeHint">
+      <span data-when="student" <%= type === 'owner' ? 'hidden' : '' %>>Right after signing up you'll set up your required student information.</span>
+      <span data-when="owner" <%= type === 'owner' ? '' : 'hidden' %>>Your organization is created with your account.</span>
+    </p>
+  </form>
+</section>
+<%- include('foot') %>

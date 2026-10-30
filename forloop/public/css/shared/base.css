@@ -897,56 +897,86 @@ label.upload-btn {
   font-size: 24px;
   margin-bottom: 8px;
 }
+/*
+ * Every tile color exposes a pair: --tile (its own background) and --on-tile
+ * (a readable foreground). Components sitting on a banner use the pair, so
+ * text and buttons always contrast with the color they were given.
+ */
 .c-yellow {
-  background: var(--yellow);
+  --tile: var(--yellow);
+  --on-tile: #173d3a;
+  background: var(--tile);
 }
 .c-teal {
-  background: var(--teal);
+  --tile: var(--teal);
+  --on-tile: #173d3a;
+  background: var(--tile);
 }
 .c-lime {
-  background: var(--lime);
+  --tile: var(--lime);
+  --on-tile: #173d3a;
+  background: var(--tile);
 }
 .c-lilac {
-  background: var(--lilac);
+  --tile: var(--lilac);
+  --on-tile: #173d3a;
+  background: var(--tile);
 }
 .c-salmon {
-  background: var(--salmon);
+  --tile: var(--salmon);
+  --on-tile: #173d3a;
+  background: var(--tile);
 }
 .c-sky {
-  background: #9cc9ee;
+  --tile: #9cc9ee;
+  --on-tile: #173d3a;
+  background: var(--tile);
 }
 .c-rose {
-  background: #f0b3c8;
+  --tile: #f0b3c8;
+  --on-tile: #173d3a;
+  background: var(--tile);
 }
 .c-sand {
-  background: #e6d3a8;
+  --tile: #e6d3a8;
+  --on-tile: #173d3a;
+  background: var(--tile);
 }
 .c-orange {
-  background: #f58a2e;
+  --tile: #f58a2e;
+  --on-tile: #173d3a;
+  background: var(--tile);
 }
 .c-white {
-  background: #fff;
+  --tile: #fff;
   --on-tile: #173d3a;
+  background: var(--tile);
 }
 .swatch.c-white {
   box-shadow: inset 0 0 0 1px rgba(23, 61, 58, 0.25);
 }
 /* Dark banners switch to light text so titles and buttons stay readable */
 .c-black {
-  background: #1a1d1c;
+  --tile: #1a1d1c;
   --on-tile: #f4f3ee;
+  background: var(--tile);
 }
 .c-red {
-  background: #d63b33;
+  --tile: #d63b33;
   --on-tile: #fff;
+  background: var(--tile);
 }
 .c-brown {
-  background: #7a4b2d;
+  --tile: #7a4b2d;
   --on-tile: #fff;
+  background: var(--tile);
 }
+/* Inside a banner the eyebrow follows the banner text, never the coral accent */
 .c-black .eyebrow,
 .c-red .eyebrow,
-.c-brown .eyebrow {
+.c-brown .eyebrow,
+.mine .eyebrow,
+.news .eyebrow {
   color: inherit;
   opacity: 0.75;
 }
@@ -1042,6 +1072,14 @@ label.upload-btn {
 .mini:has(img) {
   overflow: hidden;
   background: #fff;
+}
+/* On an organization banner the logo sits on the color the org picked, not white */
+.mine .logo-badge:has(img) {
+  background: var(--tile);
+}
+/* Same idea for the logo tile in an application row */
+.app-row .mini:has(img) {
+  background: var(--tile);
 }
 .logo-badge.big {
   width: 92px;

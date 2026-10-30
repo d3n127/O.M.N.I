@@ -616,6 +616,7 @@
   align-items: center;
   gap: 26px;
   margin-bottom: 18px;
+  color: var(--on-tile);
 }
 .mine > div {
   flex: 1;
@@ -627,6 +628,24 @@
 .mine p:last-child {
   font-size: 13px;
   opacity: 0.8;
+}
+/* Buttons flip the banner palette: readable fill, banner-colored label */
+.mine .btn.dark {
+  background: var(--on-tile);
+  color: var(--tile);
+}
+.mine .btn.dark:hover {
+  background: var(--on-tile);
+  filter: brightness(0.92);
+}
+/* Outline buttons need the tile color, not --ink, to stay visible on dark banners */
+.mine .btn.outline {
+  color: var(--on-tile);
+  border-color: var(--on-tile);
+}
+.mine .btn.outline:hover {
+  background: var(--on-tile);
+  color: var(--tile);
 }
 .facts {
   display: flex;

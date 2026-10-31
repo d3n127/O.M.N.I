@@ -1,0 +1,308 @@
+# O.M.N.I: System Explanation
+
+O.M.N.I is a student-organization portal for a campus. Students discover organizations, apply to join, and follow their events and announcements. Advisers (the staff who run an organization) manage members, review applications, post events and announcements, and read reports.
+
+It is a Node.js app built with **Express**, **EJS** templates and a **MySQL** database named `fourloop_db`. Pages are rendered on the server and sent as HTML. The browser-side JavaScript is small and only adds small interactions such as popups and filters.
+
+---
+
+## 1. What the system does
+
+### Who uses it
+
+| Person | Portal | What they can do |
+|---|---|---|
+| **Visitor** | Landing page, sign in, sign up | See the landing page and create an account. |
+| **Student with no organization** ("non-member") | `/nonmember` | Browse organizations, apply, see public events and RSVP, read recruitment posts. |
+| **Student in at least one organization** ("member") | `/student` | Everything a non-member can do, plus: My Organization (their groups, a member directory and announcements), My calendar, and application status. |
+| **Adviser** | `/admin` | Run one organization: edit its profile and brand color, manage members and officer roles, review applications, post events and announcements, take attendance, read reports. |
+
+A student moves from `/nonmember` to `/student` automatically when their first application is approved. An adviser always lands in `/admin`.
+
+### Main features
+
+- **Accounts:** one sign-in form for students and advisers. Passwords are hashed with scrypt. A student must finish a "Student information" form before using the portals.
+- **Discover and apply:** search and filter organizations, save bookmarks, apply with an intro, consent and optional organization-specific questions. Advisers get a notification and approve or decline.
+- **Events:** advisers create draft or published events with a time, place, capacity and a program (the flow and speakers). Students RSVP. When an event is full, students join a **waitlist** and are promoted automatically when a seat opens.
+- **Events page for students:** a month calendar showing only the events they joined, a list of their events with the program, and a separate "Open to join" section with seats remaining. Events can be exported to a calendar app as `.ics` files.
+- **Attendance:** advisers tick who showed up. The reports then use the real check-in rate.
+- **Reminders:** the server sends a reminder notification the day before and on the day of an event.
+- **Announcements:** advisers post either a **member update** (notifies members) or a **recruitment** call (public to all students, with an optional closing date).
+- **Member directory:** members of an organization can see its officers and members.
+- **Brand color:** each organization picks one of 12 colors, used on its banners and cards.
+- **Reports:** acceptance rate, attendance, 6-month member growth, and a CSV export.
+- **Notifications, dark mode, profile photo and logo uploads.**
+
+### How a request flows
+
+```
+Browser -> app.js (session, user, page values) -> routes/<area> -> MySQL (conn.js) -> views/<area>.ejs -> HTML
+```
+
+1. `app.js` receives every request, loads the session and re-reads the signed-in user from the database.
+2. A router in `routes/` checks the user's role, queries MySQL and renders a view, or redirects.
+3. Database calls use **callbacks** (no `async` / `await`): `db.query(sql, [values], (err, rows) => { ... })`. Everything that needs the answer is written inside the callback. A helper that reads the database ends with `done(err, result)`. A route handler has `(req, res, next)` and finishes by rendering, redirecting, or calling `next(err)`.
+
+---
+
+## 2. How to run it
+
+| Command | What it does |
+|---|---|
+| `npm install` | Installs the dependencies. |
+| `npm run setup` | **Drops and recreates** `fourloop_db`, creates every table and fills demo data. Never run it on data you want to keep. |
+| `npm start` | Starts the server with nodemon on http://localhost:3000. |
+| `npm run dev` | Starts the server with `node --watch`. |
+
+Demo accounts (password `password`): `maya@north.edu` (student) and `admin@codecraft.edu` (adviser). `setup.js` also creates advisers for the other organizations.
+
+---
+
+## 3. Project layout
+
+```
+forloop/
+  app.js  conn.js  utils.js  setup.js  database.sql  package.json  README.md
+  routes/       server logic (one file per area)
+  views/        EJS pages, grouped by portal
+  public/       static files: css, browser js, images, uploads
+  docs/         project notes and this document
+```
+
+---
+
+## 4. Root files
+
+| File | What it does |
+|---|---|
+| **app.js** | Entry point. Sets up Express, EJS, static files, JSON and form parsing, and sessions (8-hour cookie). Runs two middleware on every request, mounts the routers, adds the 404 and 500 handlers, and starts the server on port 3000. After it starts listening it also calls `startReminders()`. |
+| **conn.js** | Creates the one MySQL connection (user `root`, host `localhost`, no password, database `fourloop_db`). Every route file imports it. |
+| **utils.js** | Shared helpers: flow helpers (`series`, `parallel`), `flash`, input cleaning, password hashing, date formatting, the department list, the `ICONS` table and the `icon()` function, and the `ORG_COLORS` list. |
+| **setup.js** | Builds the database and the demo data (see section 6). |
+| **database.sql** | The same schema and demo data as plain SQL, for importing by hand (for example in phpMyAdmin). When the schema changes, it changes here and in `setup.js`. |
+| **package.json** | Dependencies (`express`, `ejs`, `express-session`, `mysql2`, `nodemon`) and the three scripts. |
+| **README.md** | Install and run instructions. |
+| **explanation.md** | An older, shorter explanation. This document replaces it. |
+
+### app.js: functions
+
+| Function | What it does |
+|---|---|
+| `logDatabaseError(err)` | Logs a helpful message if MySQL is down or the database is missing. |
+| `loadUser` | If the session has a user, re-reads id, name, role and organization from the database and refreshes the session. If the account is gone, the session is destroyed. So a role change or a deleted account applies on the very next click. |
+| `loadPageValues` | Gives every view `me` (the user), `flash` (a one-time toast, then removed), `notes` (the 8 latest notifications), `unread` (count) and a default `badge`. |
+| `markNotificationsRead` | `POST /notifications/read`. Marks the user's notifications as read. |
+| `showNotFound` | The 404 page for any URL no router matched. |
+| `showServerError(err, req, res, next)` | The error handler (four parameters). Logs the error and shows the 500 page. |
+| `announceStart` | Prints the "running at" line and starts the reminder job. |
+| `handleServerError(err)` | If the port is already in use, explains how to stop the other copy and exits. |
+
+### utils.js: functions
+
+| Function | What it does |
+|---|---|
+| `series(steps, done)` | Runs callback-style steps one after another. Stops at the first error. |
+| `parallel(tasks, done)` | Starts several tasks at once and calls `done(err, results)` with `results.name` for each. |
+| `flash(req, msg, type)` | Stores a one-time message (`'ok'` green or `'err'` red) in the session. |
+| `text(value, max)` | Turns input into a trimmed string cut to `max` characters. |
+| `cleanEmail(value)` | `text()` plus lowercase. |
+| `hashPassword(password, done)` | Random 16-byte salt plus scrypt. Gives `salt:hexkey`. |
+| `verifyPassword(password, stored, done)` | Re-hashes with the stored salt and compares in constant time. |
+| `ymd(d)` | A `Date` to `YYYY-MM-DD` in local time. |
+| `fmtShort`, `fmtDay`, `fmtMon`, `fmtLong`, `fmtMonthYear`, `fmtTime` | Format dates and times for display (for example `Mar 07`, `7`, `Mar`, `March 7`, `Mar 2025`, `2:30 PM`). |
+| `initials(name)` | `"Maya Alvarez"` gives `"MA"`. Used for avatars and default logos. |
+| `deptAbbr(name)` | A department name to its abbreviation. |
+| `icon(name, size, cls)` | Returns an inline SVG string. Views call `<%- icon('bell') %>`. |
+| `viewHelpers` | The helpers above that views need. `app.js` copies them into `app.locals`. |
+| `ORG_COLORS` | The 12 brand colors an organization can choose. Each has a `.c-<name>` CSS class. |
+
+---
+
+## 5. routes/ (the server logic)
+
+Every route file has the same shape: helpers at the top, one named handler per page or action, and a **Routes** block at the bottom that lists each URL and its handler.
+
+### routes/auth.js: sign in, sign up, guards
+
+URLs: `GET /`, `/login`, `/register`, `POST /auth/login`, `POST /auth/register`, `GET /logout`. The old `/login/:role` URLs redirect.
+
+| Function | What it does |
+|---|---|
+| `countOrgs(uid, done)` | How many organizations the user belongs to. 0 means non-member. |
+| `hasStudentInfo(uid, done)` | Whether the student finished the student information form. |
+| `homeFor(user, done)` | Where a user belongs: advisers to `/admin`, unfinished students to `/student-info`, members to `/student`, everyone else to `/nonmember`. |
+| `redirectHome(user, res, next)` | Redirects to `homeFor`'s answer. |
+| `sessionUser(row)` | The small object kept in the session (`id`, `name`, `role`, `org_id`). |
+| `requireAuth` | Guard: must be signed in. |
+| `requireRole(...roles)` | Guard factory. The wrong role is sent to its own portal. |
+| `requireNonMember`, `lockNonMembers` | Keep students with no organization in `/nonmember` and members in `/student`. |
+| `requireStudentInfo` | Sends students with an incomplete profile to `/student-info`. |
+| `renderAuth`, `redirectSignedInUser`, `showLanding`, `showLogin`, `showRegister`, `redirectOldLoginUrl` | Render the landing, sign-in and sign-up pages. |
+| `validateRegistration(form, done)` | Checks name, email, password length (6+), organization name for advisers, and that the email is unused. |
+| `createOrganization(name, done)`, `createOrganizationIfAdviser(form, done)` | A new adviser gets a starter organization with a random color. |
+| `login` | Checks the password and signs in. The same message is shown for a wrong email or a wrong password, so it does not reveal which accounts exist. |
+| `register` | Validates, creates the account (and organization for advisers), signs in. |
+| `logout` | Destroys the session. |
+
+### routes/profile.js: account pages
+
+URLs: `/student-info` (GET, POST), `/profile`, `/settings`, `POST /profile`, `POST /profile/password`. It is mounted at `/`, so its guards only apply to these paths.
+
+| Function | What it does |
+|---|---|
+| `choosePortalLayout` | Picks the admin, student or non-member page frame for the user. |
+| `readStudentInfo(body)`, `checkStudentInfo(info, uid, done)` | Clean and validate student ID, program, contact and college. |
+| `showStudentInfo`, `saveStudentInfo`, `renderStudentInfo` | The required student information form. |
+| `loadOrgName`, `loadMemberships`, `loadAccount`, `renderAccountPage` | Load the account for Profile and Settings. |
+| `showProfile`, `showSettings` | The read-only profile and the edit page. |
+| `saveProfile`, `saveProfileChanges`, `backToSettings` | Save name, email and student fields. The email must be unique. |
+| `changePassword` | Checks the current password, then stores the new hash. |
+
+### routes/uploads.js: image uploads
+
+| Function | What it does |
+|---|---|
+| `imageExtension(buf)` | Detects JPG, PNG or WebP from the file's first bytes, not from its name. |
+| `saveImage`, `removeOldFile` | Write the image to `public/uploads` (up to 2 MB) and delete the previous one. |
+| `uploadAvatar` | `POST /upload/avatar`. Profile picture for any signed-in user. |
+| `uploadOrgLogo` | `POST /upload/org-logo`. Organization logo, advisers only. |
+| `uploadError` | Turns an upload error into a JSON reply. |
+
+### routes/apply.js: applying to an organization
+
+| Function | What it does |
+|---|---|
+| `applyToOrg` | Shared by `/student/apply` and `/nonmember/apply`. Students only. Requires an intro and consent, rejects unknown organizations and existing members, blocks duplicates unless the earlier one was rejected, and requires an answer to every organization question. Notifies the adviser and replies with JSON. |
+| `saveApplication(existing, orgId, userId, intro, done)` | Creates the application, or re-opens a rejected one as pending. |
+| `saveAnswers(applicationId, questions, answers, done)` | Stores the answers together with a copy of the question text, so later edits to a question do not break old answers. |
+
+### routes/portal.js: pages shared by students and non-members
+
+`addSharedPages(router, { view, base })` is called by both portals, so Discover, Apply, Events, calendar export and Recruitment exist once.
+
+| Function | What it does |
+|---|---|
+| `UPCOMING` | A SQL condition for "published and not in the past". |
+| `getOrgs(uid, search, done)` | Organizations for the card grid with member count, bookmarked, application status, membership and application questions. |
+| `getUpcomingSummary(limit, done)` | The upcoming total and the next few events. |
+| `getAllCategories(done)` | Categories for the filter chips. |
+| `monthRange(param)`, `layoutMonth(range, events)` | Work out the month for `?month=YYYY-MM` and lay it out as Sunday-first weeks of day cells. |
+| `addSharedPages` | Registers the routes below. |
+| `showDiscover` | `GET /discover`. Search and filters. |
+| `showEvents` | `GET /events`. The student's calendar, their events and the open events with seats left. |
+| `toggleRsvp` | `POST /events/:id/rsvp`. Joins, goes on the waitlist when the event is full, or cancels (and promotes the next person). |
+| `downloadEventCalendar`, `downloadMyCalendar`, `sendCalendar` | `.ics` downloads for one event or all upcoming joined events. |
+| `showRecruitment` | `GET /recruitment`. Open recruitment posts from every organization, with the viewer's member or application state. |
+
+### routes/student/index.js: member portal (`/student`)
+
+| Function | What it does |
+|---|---|
+| `countPending`, `loadBadge` | Pending applications count, shown as a sidebar badge. |
+| `getApplications(uid, limit, done)` | The student's applications, newest first. |
+| `getAnnouncements(uid, limit, done)` | Member updates from the student's organizations. |
+| `showHome` | Home: stats, suggested organizations, upcoming events and announcements. |
+| `showApplications` | Application list. |
+| `toggleBookmark` | `POST /bookmark/:id`. Replies with JSON. |
+| `showMyOrganizations` | **My Organization.** The student's groups with role and join date, plus recent announcements. |
+| `showAnnouncements` | `GET /announcements`. All member updates. |
+| `showDirectory` | `GET /organizations/:id/directory`. Members only. Officers first, then members. |
+
+### routes/nonmember/index.js: limited portal (`/nonmember`)
+
+`showHome` shows the limited home. Everything else comes from `addSharedPages`.
+
+### routes/admin/index.js: adviser portal (`/admin`)
+
+An adviser can only manage their own organization. The middleware `loadOrganization` loads it on every page.
+
+| Function | What it does |
+|---|---|
+| `loadOrganization` | Loads the organization, its roles and the pending count. |
+| `defaultMemberRole(roles)`, `addMember(...)`, `notifyUser(...)` | Small helpers for new members and notifications. |
+| `countEvents`, `orgStats`, `memberGrowth` | Numbers for Overview and Reports: members, acceptance rate, attendance (the real check-in rate once attendance is taken) and 6-month growth. |
+| `showOverview` | Overview and the next events. |
+| `showOrganization`, `saveOrganization` | Edit the profile and choose the brand color. |
+| `showMembers`, `inviteMember`, `changeMemberRole`, `removeMember` | Member management. |
+| `showOfficers`, `moveRole`, `addRole`, `removeRole`, `changeOfficers` | The officer hierarchy. A lower precedence number means a higher rank. |
+| `showApplications`, `reviewApplication`, `saveQuestions` | Review applications (with answers), approve or decline, and edit up to 5 application questions. |
+| `showEvents`, `readEvent`, `readCapacity`, `createEvent`, `updateEvent`, `deleteEvent`, `notifyMembers` | Event management with capacity and program. Members are notified only when an event is first published. Raising capacity promotes the waitlist. |
+| `showAttendance`, `saveAttendance` | Check-in list for an event. |
+| `showAnnouncements`, `createAnnouncement`, `deleteAnnouncement` | Post a member update (notifies members) or a recruitment call (public). |
+| `showReports`, `exportReport` | Reports page and CSV download. |
+
+### Helper modules used by the routes
+
+| File | Functions | What they do |
+|---|---|---|
+| **routes/program.js** | `parseProgram`, `programToText`, `saveProgram`, `attachProgram` | The event program. One line per item: `time | title | speaker`. Invalid times are dropped, up to 30 items. |
+| **routes/rsvp.js** | `promoteWaitlist(eventId, done)` | Fills free seats from the waitlist, oldest first, and notifies those students. |
+| **routes/calendar.js** | `buildCalendar`, `stamp`, `endStamp`, `fold`, `describe` | Builds `.ics` calendar text (escaping and 75-character line folding). |
+| **routes/reminders.js** | `sendEventReminders`, `startReminders` | Notifies people going to events happening today or tomorrow. Runs at start and then every hour. Each event is reminded once. |
+
+---
+
+## 6. setup.js and the database
+
+`setup.js` holds the `SCHEMA`, the demo lists (`ORGANIZATIONS`, `DEFAULT_ROLES`) and `seed(done)`. Inside `seed`, `queue` adds a step and `addOrg`, `addUser`, `addMember`, `addApplication`, `addEvent`, `addProgram` and `addNotification` queue single inserts, so the demo data reads as a list. `addDays(n)` makes dates relative to today.
+
+| Table | Purpose |
+|---|---|
+| **organizations** | Name, description, category, tags, eligibility, brand color, logo, meeting schedule. |
+| **org_roles** | The officer hierarchy per organization. |
+| **users** | Students and advisers, student details, `profile_complete`, and the adviser's `org_id`. |
+| **memberships** | Which user is in which organization, with their role. |
+| **applications** | A student's application: intro, status (pending, approved, rejected). |
+| **org_questions** | Questions an organization asks applicants. |
+| **application_answers** | Answers, stored with a copy of the question text. |
+| **events** | Date, time, place, status, `capacity`, `attendance_taken`, `reminder_sent`. |
+| **event_program** | The flow and speakers of an event. |
+| **rsvps** | Who joined an event: `status` is going or waitlist, `seq` orders the waitlist, `attended` is the check-in. |
+| **bookmarks** | Organizations a student saved. |
+| **announcements** | Posts by an organization: `kind` is `update` or `recruitment`, with an optional `closes_on`. |
+| **notifications** | Messages in the bell menu, with read and unread state. |
+
+---
+
+## 7. views/ (the pages)
+
+| Folder | Contents |
+|---|---|
+| **views/shared/** | Pages and partials used by every portal: `index` (landing), `auth` (sign in and up), `student-info`, `profile`, `settings`, `events-body` (the Events page body), `event-actions` (join, waitlist and cancel buttons), `event-program`, `recruitment-body`, and the `head`, `foot`, `logo` and `tools` partials. |
+| **views/student/** | Member portal: home, discover, applications, events, recruitment, organizations (My Organization), announcements, directory, plus `partials/` (top bar, bottom, org card, apply popup). |
+| **views/nonmember/** | Limited portal: home, discover, events, recruitment, plus `partials/`. |
+| **views/admin/** | Adviser portal (all navigation in the sidebar): overview, organization, members, officers, applications, events, attendance, announcements, reports, plus `partials/`. |
+
+`student/events.ejs`, `nonmember/events.ejs` and the two `recruitment.ejs` files only add their portal's top bar and include the shared body, so the two portals never drift apart.
+
+---
+
+## 8. public/ (files sent as they are)
+
+| File | What it does |
+|---|---|
+| **css/shared/base.css** | Variables, dark mode, buttons, forms, modals, the calendar, the brand color classes `.c-*` and their swatches. |
+| **css/student/student.css** | Student and non-member pages. |
+| **css/admin/admin.css** | The adviser sidebar layout and admin pages. |
+| **js/shared/common.js** | Theme toggle, dropdowns, search shortcut, tabs, popups, toast, image upload. Exposes `FL.$`, `FL.$$` and `FL.openModal`. |
+| **js/student/student.js** | Filter chips, bookmarks, the apply popup including its question fields. |
+| **js/admin/admin.js** | The event popup, organization preview and color picker, the announcement type switch, select-all for attendance, the mobile drawer. |
+| **pic/** | The logo and organization logos. |
+| **uploads/** | Images uploaded through the app. This is runtime data. |
+
+---
+
+## 9. Security notes
+
+- Passwords are never stored in plain text: a random salt and scrypt.
+- The role comes from the database on every request, not from the cookie.
+- Each portal is protected by role guards. Advisers can only manage their own organization.
+- SQL uses `?` placeholders to prevent SQL injection. EJS escapes output by default (`<%= %>`); raw output (`<%- %>`) is used only for trusted SVG icons.
+- Uploaded images are checked by their content, limited to 2 MB, and stored under generated names.
+- The session secret comes from `SESSION_SECRET`, with a development fallback in `app.js`.
+
+## 10. Known limits
+
+- `.gitignore` has a formatting problem that stops `database.sql` and `public/uploads/*` from being ignored.
+- There is no CSRF protection, rate limiting or email verification yet.
+- Reminders run inside the web server process, so they only run while the server is running.

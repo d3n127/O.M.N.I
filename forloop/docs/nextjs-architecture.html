@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O.M.N.I — Next.js + Supabase Architecture Blueprint</title>
+<style>
+  :root {
+    --bg: #f4f3ee; --paper: #f7f5ef; --surface: #fff; --tan: #efe8dc;
+    --line: #e5e3db; --muted: #6c7b78; --ink: #173d3a; --accent: #173d3a;
+    --green: #173d3a; --navy: #223a58; --yellow: #ffd04a; --coral: #e2604b;
+    --teal: #a8d8d0; --lime: #b8dc6f; --lilac: #c5b0d6; --sky: #9cc9ee;
+    --code-bg: #152421; --code-ink: #d7e5df;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1412; --paper: #152421; --surface: #1b2d29; --tan: #223530;
+      --line: #2c4641; --muted: #9db1ac; --ink: #e8f0ec; --accent: #7fd4c0;
+      --code-bg: #0f1c1a; --code-ink: #cfe0da;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.6 ui-sans-serif, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  header {
+    background: var(--green); color: #f4f3ee; padding: 2.5rem 1.5rem 2rem;
+  }
+  @media (prefers-color-scheme: dark) { header { background: #0f1c1a; } }
+  header .wrap, main, footer .wrap { max-width: 1000px; margin: 0 auto; }
+  header h1 { margin: 0 0 .35rem; font-size: 1.9rem; letter-spacing: -.02em; }
+  header p { margin: .25rem 0; color: var(--teal); }
+  header .meta { font-size: .85rem; color: #b8dc6f; }
+  nav {
+    position: sticky; top: 0; z-index: 10; background: var(--surface);
+    border-bottom: 1px solid var(--line); padding: .55rem 1.5rem;
+    display: flex; flex-wrap: wrap; gap: .35rem .9rem; font-size: .82rem;
+  }
+  nav a { color: var(--accent); text-decoration: none; font-weight: 600; }
+  nav a:hover { text-decoration: underline; }
+  main { padding: 1.5rem; }
+  section { margin: 2.5rem 0; }
+  h2 {
+    font-size: 1.35rem; margin: 0 0 .8rem; padding-bottom: .4rem;
+    border-bottom: 2px solid var(--line); letter-spacing: -.01em;
+  }
+  h3 { font-size: 1.05rem; margin: 1.4rem 0 .5rem; }
+  p, li { font-size: .95rem; }
+  code {
+    font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+    font-size: .85em; background: var(--tan); padding: .1em .35em; border-radius: 4px;
+  }
+  pre {
+    background: var(--code-bg); color: var(--code-ink); padding: 1rem 1.1rem;
+    border-radius: 10px; overflow-x: auto; font-size: .8rem; line-height: 1.5;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; color: inherit; }
+  table {
+    width: 100%; border-collapse: collapse; margin: .8rem 0; font-size: .87rem;
+    background: var(--surface);
+  }
+  th, td { border: 1px solid var(--line); padding: .45rem .6rem; text-align: left; vertical-align: top; }
+  th { background: var(--tan); font-size: .8rem; text-transform: uppercase; letter-spacing: .04em; }
+  tr:nth-child(even) td { background: color-mix(in srgb, var(--paper) 55%, transparent); }
+  .badge {
+    display: inline-block; font-size: .72rem; font-weight: 700; padding: .1rem .45rem;
+    border-radius: 999px; background: var(--teal); color: #173d3a; white-space: nowrap;
+  }
+  .badge.new { background: var(--yellow); }
+  .badge.same { background: var(--lime); }
+  .note {
+    border-left: 4px solid var(--coral); background: var(--surface);
+    padding: .7rem 1rem; border-radius: 0 8px 8px 0; margin: .9rem 0; font-size: .9rem;
+  }
+  .ok { border-left-color: var(--lime); }
+  footer { border-top: 1px solid var(--line); padding: 1.5rem; color: var(--muted); font-size: .85rem; }
+  .swatches { display: flex; flex-wrap: wrap; gap: .5rem; margin: .6rem 0; }
+  .swatch {
+    width: 74px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line);
+    font-size: .68rem; text-align: center; background: var(--surface);
+  }
+  .swatch .chip { height: 34px; }
+  .swatch .lbl { padding: .2rem .1rem; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <h1>O.M.N.I — Next.js + Supabase Architecture Blueprint</h1>
+    <p>Student organization portal — full rewrite of the Express + EJS + MySQL app</p>
+    <p class="meta">Source: <code style="background:#223a58;color:#b8dc6f">forloop/</code> · Target: Next.js 15 (App Router) + Supabase (Postgres · Auth · Storage · pg_cron) · v1.0</p>
+  </div>
+</header>
+
+<nav>
+  <a href="#overview">1. Overview</a>
+  <a href="#stack">2. Stack Migration</a>
+  <a href="#folders">3. Folder Structure</a>
+  <a href="#routes">4. Route &amp; Endpoint Map</a>
+  <a href="#data">5. Data Model</a>
+  <a href="#access">6. Access Control</a>
+  <a href="#design">7. Design System</a>
+  <a href="#features">8. Feature Specs</a>
+  <a href="#phases">9. Build Phases</a>
+  <a href="#gaps">10. Known Gaps</a>
+</nav>
+
+<main>
+
+<!-- ================================================================ -->
+<section id="overview">
+  <h2>1. Overview</h2>
+  <p>
+    O.M.N.I is a campus student-organization portal with <strong>three portals</strong> and a public site.
+    The current implementation is a single Express app: server-rendered EJS views, hand-rolled scrypt
+    sessions, callback-style <code>mysql2</code>, and no build step. This document specifies the complete
+    rewrite to <strong>Next.js 15 App Router + Supabase</strong> as a TypeScript codebase.
+  </p>
+
+  <h3>User matrix (unchanged semantics)</h3>
+  <table>
+    <tr><th>Persona</th><th>Who</th><th>Portal</th></tr>
+    <tr><td>Visitor</td><td>Not signed in</td><td><code>/</code> · <code>/login</code> · <code>/register</code></td></tr>
+    <tr><td>Non-member</td><td>Student with <strong>0</strong> memberships</td><td><code>/nonmember</code> (reduced nav)</td></tr>
+    <tr><td>Member</td><td>Student with ≥ 1 membership</td><td><code>/student</code></td></tr>
+    <tr><td>Adviser</td><td>Runs exactly one organization</td><td><code>/admin</code></td></tr>
+  </table>
+
+  <div class="note ok">
+    <strong>Golden rule:</strong> the portal split is <em>derived from membership count, not a role</em>.
+    Approving a non-member's application must auto-graduate them to <code>/student</code>; removing a
+    member from their last organization must demote them to <code>/nonmember</code>. Preserve this exactly.
+  </div>
+
+  <h3>Rewrite goals</h3>
+  <ul>
+    <li>Preserve every URL path (<code>/student/discover</code>, <code>/admin/events/:id/attendance</code>, …) so bookmarks and habits survive.</li>
+    <li>Preserve per-request authority: role, org, and membership count are read fresh on every render — never trusted from the cookie alone.</li>
+    <li>Replace the 5-dependency Express stack with Next.js + Supabase; TypeScript everywhere; typed query layer.</li>
+    <li>Fix known gaps (rate limiting, email verification, in-process cron) while rewriting.</li>
+    <li>Port the seeded demo data (4 orgs, 43 users, 5 events incl. one full event to demo the waitlist) so dev experience matches.</li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<section id="stack">
+  <h2>2. Stack Migration</h2>
+  <table>
+    <tr><th>Concern</th><th>Today (forloop/)</th><th>Next.js target</th><th>Notes</th></tr>
+    <tr>
+      <td>Framework</td><td>Express 4</td>
+      <td>Next.js 15, App Router, TypeScript</td>
+      <td>Pages = Server Components; mutations = Server Actions; downloads/feeds = Route Handlers.</td>
+    </tr>
+    <tr>
+      <td>Views</td><td>42 EJS files (many thin wrappers)</td>
+      <td>React Server Components + shared <code>&lt;Portal&gt;</code> layouts</td>
+      <td>The 5 shared bodies (events, recruitment, org card, apply modal, event program) become one component tree reused by both portals.</td>
+    </tr>
+    <tr>
+      <td>Auth / session</td><td>express-session (8 h) + scrypt <code>salt:hexkey</code></td>
+      <td><strong>Supabase Auth</strong> (email + password), HTTP-only cookies via <code>@supabase/ssr</code></td>
+      <td>Middleware refreshes tokens; server components re-fetch the profile row each request → same "role changes apply instantly" behavior. Password migration: import users with a one-time hash conversion or force reset; default plan = fresh Supabase credentials + seeded demo passwords.</td>
+    </tr>
+    <tr>
+      <td>Database</td><td>MySQL (<code>mysql2</code>, callbacks)</td>
+      <td>Postgres via <strong>Supabase</strong>; plain typed SQL in <code>lib/queries/</code></td>
+      <td>No ORM — keep query parity with the original. <code>dateStrings</code> parity: query dates as <code>YYYY-MM-DD</code> text.</td>
+    </tr>
+    <tr>
+      <td>Authorization</td><td>Route guards (<code>requireAuth</code>, <code>requireRole</code>, <code>lockNonMembers</code>…)</td>
+      <td><code>middleware.ts</code> for portal gates + per-page <code>requireX()</code> guards in Server Components + <strong>RLS</strong> as the backstop</td>
+      <td>Guards return redirects (<code>redirect()</code>) exactly where the Express guards did.</td>
+    </tr>
+    <tr>
+      <td>Uploads</td><td>Raw-body <code>fetch</code>, magic-byte sniffing, <code>public/uploads</code></td>
+      <td><strong>Supabase Storage</strong> buckets <code>avatars</code> / <code>org-logos</code>; upload via Server Action from a client component</td>
+      <td>Keep mime + 2 MB checks; replace old-file cleanup with storage object removal.</td>
+    </tr>
+    <tr>
+      <td>Reminders</td><td>In-process <code>setInterval</code> (hourly)</td>
+      <td><strong>pg_cron</strong> scheduled SQL function ( hourly) inserting notifications for today/tomorrow events</td>
+      <td>Survives serverless; <code>reminder_sent</code> flag stays the idempotency guard.</td>
+    </tr>
+    <tr>
+      <td>Notifications</td><td>Table + <code>POST /notifications/read</code></td>
+      <td>Same table; bell reads in a Server Component; mark-read = Server Action (or route handler <code>POST /api/notifications/read</code> for the existing client fetch)</td>
+      <td>Fan-out points unchanged (see §8.4).</td>
+    </tr>
+    <tr>
+      <td>Calendar / CSV</td><td>Hand-built ICS (75-char folding) + CSV string</td>
+      <td>Pure functions in <code>lib/generators/</code> served by Route Handlers</td>
+      <td>Byte-for-byte behavior preserved; trivial to unit-test.</td>
+    </tr>
+    <tr>
+      <td>Flash &amp; toasts</td><td><code>req.session.flash</code> + toast DOM</td>
+      <td>Cookie-based flash read once by the portal layout, or redirect + <code>toast()</code> query param</td>
+      <td>Pick one pattern in Phase 2 and use it everywhere.</td>
+    </tr>
+    <tr>
+      <td>Client JS</td><td>3 vanilla IIFEs (<code>common/student/admin</code>)</td>
+      <td>Small client components (modals, chips, drawer, attendance select-all)</td>
+      <td>No client framework dependency introduced beyond React.</td>
+    </tr>
+    <tr>
+      <td>Styling</td><td>3 hand-written CSS files, CSS variables, <code>data-theme</code></td>
+      <td>Same approach: <code>app/globals.css</code> with the identical token set; per-portal CSS files kept or split into <code>components/**/*.css</code></td>
+      <td>No Tailwind (keeps diff against the original visual design minimal). Fonts via <code>next/font/google</code>.</td>
+    </tr>
+    <tr>
+      <td>Jobs / scheduler</td><td>None (in-process)</td>
+      <td>pg_cron + Supabase Edge Function (optional for email later)</td>
+      <td>—</td>
+    </tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section id="folders">
+  <h2>3. Folder Structure</h2>
+  <pre><code>forloop-next/
+├── app/
+│   ├── layout.tsx                    # root: fonts (Bricolage Grotesque + DM Sans), theme init
+│   ├── globals.css                   # design tokens + reset (from base.css)
+│   ├── page.tsx                      # public landing  →  GET /
+│   ├── login/page.tsx                # auth form (login mode)     →  GET /login
+│   ├── register/page.tsx             # auth form (signup mode)    →  GET /register
+│   ├── (account)/
+│   │   ├── student-info/page.tsx     # required onboarding form   →  GET/POST /student-info
+│   │   ├── profile/page.tsx          # read-only profile         →  GET /profile
+│   │   └── settings/page.tsx         # avatar, edit, password    →  GET /settings
+│   ├── (student)/
+│   │   ├── layout.tsx                # &lt;PortalShell nav="student"&gt; — top bar chrome
+│   │   ├── student/
+│   │   │   ├── page.tsx              # home dashboard            →  GET /student/
+│   │   │   ├── discover/page.tsx     # search + category chips   →  GET /student/discover
+│   │   │   ├── applications/page.tsx # history + statuses        →  GET /student/applications
+│   │   │   ├── events/page.tsx       # shared events body        →  GET /student/events
+│   │   │   ├── recruitment/page.tsx  # shared recruitment body   →  GET /student/recruitment
+│   │   │   ├── organizations/page.tsx# joined orgs + updates     →  GET /student/organizations
+│   │   │   ├── announcements/page.tsx# all member updates        →  GET /student/announcements
+│   │   │   └── organizations/[id]/directory/page.tsx  # member directory
+│   │   └── student/(actions)…        # bookmark, apply, rsvp → server actions (no URLs)
+│   ├── (nonmember)/
+│   │   ├── layout.tsx                # &lt;PortalShell nav="nonmember"&gt; — Home · Discover · Events
+│   │   └── nonmember/
+│   │       ├── page.tsx              # limited home              →  GET /nonmember/
+│   │       ├── discover/page.tsx     # shared discover           →  GET /nonmember/discover
+│   │       ├── events/page.tsx       # shared events             →  GET /nonmember/events
+│   │       └── recruitment/page.tsx  # shared recruitment        →  GET /nonmember/recruitment
+│   ├── (admin)/
+│   │   ├── layout.tsx                # &lt;PortalShell nav="admin"&gt; — sidebar chrome
+│   │   └── admin/
+│   │       ├── page.tsx              # overview KPIs             →  GET /admin/
+│   │       ├── organization/page.tsx # org profile editor        →  GET/POST /admin/organization
+│   │       ├── members/page.tsx      # member table + invite     →  GET /admin/members
+│   │       ├── officers/page.tsx     # role hierarchy manager    →  GET /admin/officers
+│   │       ├── applications/page.tsx # pipeline + questions      →  GET /admin/applications
+│   │       ├── events/page.tsx       # event list + create/edit  →  GET/POST /admin/events
+│   │       ├── events/[id]/attendance/page.tsx  # check-in sheet  →  GET/POST /admin/events/:id/attendance
+│   │       ├── announcements/page.tsx# posts manager             →  GET /admin/announcements
+│   │       └── reports/page.tsx      # stats + growth chart      →  GET /admin/reports
+│   └── api/
+│       ├── calendar/route.ts         # GET /student|nonmember/events/calendar.ics      (portal from cookie/session)
+│       ├── calendar/[id]/route.ts    # GET /student|nonmember/events/:id/calendar.ics
+│       ├── reports/export/route.ts   # GET /admin/reports/export  (CSV)
+│       └── notifications/read/route.ts  # POST /notifications/read (existing client fetch)
+├── components/
+│   ├── layout/          PortalShell · StudentTopBar · NonmemberTopBar · AdminSidebar · Toolbar · Logo
+│   ├── ui/              Button · Card · Modal · Toast · Badge · Field · SearchBox · ThemeToggle · AvatarMenu
+│   ├── domain/          OrgCard · OrgSearch · ApplyModal · EventCard · EventCalendar · EventProgram
+│   │                    · EventForm · RsvpButton · AnnouncementCard · NotificationBell · StatsTile
+│   │                    · AttendanceSheet · QuestionEditor · OfficerList · GrowthChart
+│   └── icons/           icon registry as React components (port of app.locals icon())
+├── lib/
+│   ├── supabase/
+│   │   ├── client.ts    # browser client  (@supabase/ssr createBrowserClient)
+│   │   ├── server.ts    # server client   (cookies-aware)
+│   │   └── admin.ts     # service-role client (seed, reminders fn, admin-only fan-out)
+│   ├── queries/         # typed, parameterized SQL — one file per table/feature
+│   │   ├── auth.ts      # getProfile, countOrgs, homeFor
+│   │   ├── orgs.ts      # listDiscover, getOrg, upsertOrg…
+│   │   ├── members.ts · applications.ts · events.ts · rsvps.ts
+│   │   ├── announcements.ts · notifications.ts · reports.ts · bookmarks.ts
+│   ├── guards.ts        # requireAuth / requireRole / requireStudentInfo / lockNonMembers
+│   ├── flash.ts         # cookie-backed flash helpers
+│   ├── validators.ts    # cleanEmail, EMAIL_PATTERN, ROLES, text() clamps
+│   ├── program.ts       # parseProgram / programToText  (pipe-format)
+│   └── generators/
+│       ├── ics.ts       # buildCalendar — escaping + 75-char folding
+│       └── csv.ts       # reports export
+├── supabase/
+│   ├── migrations/      # 0001_schema.sql … (all 13 tables + indexes)
+│   ├── seed.sql         # demo data mirroring setup.js (relative CURDATE() dates)
+│   └── functions/
+│       └── send-reminders/  # pg_cron target (SQL function, not Edge unless email is added)
+├── middleware.ts        # session refresh + portal gates (/student, /nonmember, /admin)
+├── .env.local          # NEXT_PUBLIC_SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY
+└── package.json</code></pre>
+
+  <h3>Layout hierarchy</h3>
+  <pre><code>app/layout.tsx                       — fonts, theme, &lt;Toast&gt;
+ └─ (student) | (nonmember) | (admin)  — route group, no URL segment
+     └─ PortalShell                    — loads `me`, notifications, unread badge
+         ├─ StudentTopBar / NonmemberTopBar / AdminSidebar
+         └─ page.tsx                   — per-page guards + data fetch</code></pre>
+</section>
+
+<!-- ================================================================ -->
+<section id="routes">
+  <h2>4. Route &amp; Endpoint Map</h2>
+
+  <h3>4.1 Pages (EJS → Next route)</h3>
+  <table>
+    <tr><th>EJS view</th><th>Next.js route</th><th>Guard</th></tr>
+    <tr><td>shared/index.ejs</td><td><code>app/page.tsx</code> (signed-in users redirect via <code>homeFor()</code>)</td><td>—</td></tr>
+    <tr><td>shared/auth.ejs (login)</td><td><code>app/login/page.tsx</code></td><td>redirect if authed</td></tr>
+    <tr><td>shared/auth.ejs (register)</td><td><code>app/register/page.tsx</code> (<code>?role=adviser</code> pre-selects tab)</td><td>redirect if authed</td></tr>
+    <tr><td>shared/student-info.ejs</td><td><code>app/(account)/student-info/page.tsx</code></td><td>auth + role=student</td></tr>
+    <tr><td>shared/profile.ejs</td><td><code>app/(account)/profile/page.tsx</code></td><td>auth (renders in portal shell)</td></tr>
+    <tr><td>shared/settings.ejs</td><td><code>app/(account)/settings/page.tsx</code></td><td>auth</td></tr>
+    <tr><td>student/home.ejs</td><td><code>app/(student)/student/page.tsx</code></td><td>auth, role=student, profile_complete, ≥1 org</td></tr>
+    <tr><td>student/discover.ejs</td><td><code>…/student/discover/page.tsx</code></td><td>same</td></tr>
+    <tr><td>student/applications.ejs</td><td><code>…/student/applications/page.tsx</code></td><td>same</td></tr>
+    <tr><td>student/events.ejs + shared/events-body.ejs</td><td><code>…/student/events/page.tsx</code> → <code>&lt;EventsPage portal&gt;</code></td><td>same</td></tr>
+    <tr><td>student/recruitment.ejs + shared/recruitment-body.ejs</td><td><code>…/student/recruitment/page.tsx</code> → <code>&lt;RecruitmentList&gt;</code></td><td>same</td></tr>
+    <tr><td>student/organizations.ejs</td><td><code>…/student/organizations/page.tsx</code></td><td>same</td></tr>
+    <tr><td>student/announcements.ejs</td><td><code>…/student/announcements/page.tsx</code></td><td>same</td></tr>
+    <tr><td>student/directory.ejs</td><td><code>…/student/organizations/[id]/directory/page.tsx</code></td><td>members-only of that org</td></tr>
+    <tr><td>nonmember/home.ejs</td><td><code>app/(nonmember)/nonmember/page.tsx</code></td><td>auth, student, complete, <strong>0 orgs</strong></td></tr>
+    <tr><td>nonmember/{discover,events,recruitment}.ejs</td><td><code>…/nonmember/{discover,events,recruitment}/page.tsx</code> — same shared components</td><td>same</td></tr>
+    <tr><td>admin/overview.ejs</td><td><code>app/(admin)/admin/page.tsx</code></td><td>auth, role=adviser</td></tr>
+    <tr><td>admin/organization.ejs</td><td><code>…/admin/organization/page.tsx</code></td><td>adviser (org from <code>users.org_id</code>)</td></tr>
+    <tr><td>admin/members.ejs</td><td><code>…/admin/members/page.tsx</code></td><td>adviser</td></tr>
+    <tr><td>admin/officers.ejs</td><td><code>…/admin/officers/page.tsx</code></td><td>adviser</td></tr>
+    <tr><td>admin/applications.ejs</td><td><code>…/admin/applications/page.tsx</code></td><td>adviser</td></tr>
+    <tr><td>admin/events.ejs</td><td><code>…/admin/events/page.tsx</code> (<code>?new=1</code> opens create modal)</td><td>adviser</td></tr>
+    <tr><td>admin/attendance.ejs</td><td><code>…/admin/events/[id]/attendance/page.tsx</code></td><td>adviser, event belongs to org</td></tr>
+    <tr><td>admin/announcements.ejs</td><td><code>…/admin/announcements/page.tsx</code></td><td>adviser</td></tr>
+    <tr><td>admin/reports.ejs</td><td><code>…/admin/reports/page.tsx</code></td><td>adviser</td></tr>
+  </table>
+
+  <h3>4.2 Mutations → Server Actions</h3>
+  <table>
+    <tr><th>Old endpoint</th><th>Action</th><th>Validation / notes</th></tr>
+    <tr><td>POST /auth/login</td><td><code>actions/auth.ts → login()</code></td><td>Supabase signIn; re-check profile; redirect <code>homeFor()</code></td></tr>
+    <tr><td>POST /auth/register</td><td><code>actions/auth.ts → register()</code></td><td>signUp; insert profile row; adviser → auto-create starter org w/ random brand color</td></tr>
+    <tr><td>GET /logout</td><td><code>actions/auth.ts → logout()</code></td><td>signOut → <code>/</code></td></tr>
+    <tr><td>POST /student-info</td><td><code>actions/profile.ts → saveStudentInfo()</code></td><td>sets <code>profile_complete = true</code></td></tr>
+    <tr><td>POST /profile</td><td><code>actions/profile.ts → saveProfile()</code></td><td>name/email (+student fields)</td></tr>
+    <tr><td>POST /profile/password</td><td><code>actions/profile.ts → changePassword()</code></td><td>verify current via Supabase re-auth</td></tr>
+    <tr><td>POST /upload/avatar</td><td><code>actions/uploads.ts → uploadAvatar()</code></td><td>≤ 2 MB, image mime, storage <code>avatars/</code></td></tr>
+    <tr><td>POST /upload/org-logo</td><td><code>actions/uploads.ts → uploadOrgLogo()</code></td><td>adviser only; delete old object</td></tr>
+    <tr><td>POST /student/bookmark/:id</td><td><code>actions/student.ts → toggleBookmark()</code></td><td>returns <code>{ saved }</code></td></tr>
+    <tr><td>POST /student|nonmember/apply</td><td><code>actions/apply.ts → applyToOrg()</code></td><td>shared handler; per-org questions ≤ 5; notify advisers</td></tr>
+    <tr><td>POST /student|nonmember/events/:id/rsvp</td><td><code>actions/rsvp.ts → toggleRsvp()</code></td><td>publish-state guard; full → waitlist; cancel → promote</td></tr>
+    <tr><td>POST /admin/organization</td><td><code>actions/admin.ts → saveOrganization()</code></td><td>org-scoped</td></tr>
+    <tr><td>POST /admin/members/invite</td><td><code>actions/admin.ts → inviteMember()</code></td><td>by email + notify</td></tr>
+    <tr><td>POST /admin/members/:mid/role</td><td><code>actions/admin.ts → changeMemberRole()</code></td><td>whitelist from <code>org_roles</code></td></tr>
+    <tr><td>POST /admin/members/:mid/remove</td><td><code>actions/admin.ts → removeMember()</code></td><td>demote-if-last-org handled downstream by portal gate</td></tr>
+    <tr><td>POST /admin/officers (reorder|add|remove)</td><td><code>actions/admin.ts → manageOfficers()</code></td><td>precedence swap</td></tr>
+    <tr><td>POST /admin/applications/questions</td><td><code>actions/admin.ts → saveQuestions()</code></td><td>≤ 5</td></tr>
+    <tr><td>POST /admin/applications/:id/:action</td><td><code>actions/admin.ts → reviewApplication()</code></td><td>approve → auto-membership + notify; decline → notify</td></tr>
+    <tr><td>POST /admin/events</td><td><code>actions/admin.ts → createEvent()</code></td><td>draft/published; publish notifies members</td></tr>
+    <tr><td>POST /admin/events/:id</td><td><code>actions/admin.ts → updateEvent()</code></td><td>capacity raise → promote waitlist; draft→published notifies</td></tr>
+    <tr><td>POST /admin/events/:id/delete</td><td><code>actions/admin.ts → deleteEvent()</code></td><td>cascades</td></tr>
+    <tr><td>POST /admin/events/:id/attendance</td><td><code>actions/admin.ts → saveAttendance()</code></td><td>sets <code>attended</code> + <code>attendance_taken</code></td></tr>
+    <tr><td>POST /admin/announcements</td><td><code>actions/admin.ts → createAnnouncement()</code></td><td>update → notify members; recruitment → public</td></tr>
+    <tr><td>POST /admin/announcements/:id/delete</td><td><code>actions/admin.ts → deleteAnnouncement()</code></td><td>—</td></tr>
+  </table>
+
+  <h3>4.3 Downloads &amp; feeds → Route Handlers</h3>
+  <table>
+    <tr><th>Endpoint</th><th>Handler</th></tr>
+    <tr><td>GET /student|nonmember/events/calendar.ics</td><td><code>app/api/calendar/route.ts</code> — "going" + upcoming</td></tr>
+    <tr><td>GET /student|nonmember/events/:id/calendar.ics</td><td><code>app/api/calendar/[id]/route.ts</code> — published only</td></tr>
+    <tr><td>GET /admin/reports/export</td><td><code>app/api/reports/export/route.ts</code> — CSV attachment</td></tr>
+    <tr><td>POST /notifications/read</td><td><code>app/api/notifications/read/route.ts</code></td></tr>
+  </table>
+</section>
+
+<!-- ================================================================ -->
+<section id="data">
+  <h2>5. Data Model (Postgres)</h2>
+  <p>
+    13 tables, one-to-one mapping from MySQL. MySQL <code>ENUM</code> → <code>CHECK</code> constraints;
+    <code>users</code> splits into Supabase <code>auth.users</code> + a <code>profiles</code> table keyed by
+    <code>auth.uid()</code>. All FKs keep the original cascade rules.
+  </p>
+  <pre><code>-- 0001_schema.sql (sketch — full DDL in supabase/migrations/)
+create table profiles (
+  id uuid primary key references auth.users on delete cascade,
+  full_name text not null,
+  email text not null unique,
+  role text not null check (role in ('student','adviser')),
+  student_id text unique,
+  program text, year_level text, contact text, college text,
+  bio text, hobbies text,
+  avatar text,
+  profile_complete boolean not null default false,
+  org_id bigint references organizations on delete set null,  -- adviser's org
+  created_at timestamptz not null default now()
+);
+
+create table organizations (
+  id bigint generated always as identity primary key,
+  name text not null, description text, category text not null default 'Technology',
+  tags text, eligibility text,
+  color text not null check (color in
+    ('yellow','teal','lime','lilac','salmon','sky','rose','sand','black','red','brown','orange','white')),
+  logo_img text, logo_style text not null default 'tile'
+    check (logo_style in ('tile','navy','cream','dark')),
+  meeting_schedule text,
+  satisfaction numeric(2,1),
+  created_at timestamptz not null default now()
+);
+
+create table org_roles (
+  id bigint generated always as identity primary key,
+  org_id bigint not null references organizations on delete cascade,
+  role_title text not null, precedence int not null, is_officer boolean not null default false,
+  unique (org_id, role_title)
+);
+
+create table memberships (
+  id bigint generated always as identity primary key,
+  org_id bigint not null references organizations on delete cascade,
+  user_id uuid not null references profiles on delete cascade,
+  role_title text not null default 'Member',
+  joined_at timestamptz not null default now(),
+  unique (org_id, user_id)
+);
+
+create table applications (
+  id bigint generated always as identity primary key,
+  org_id bigint not null references organizations on delete cascade,
+  user_id uuid not null references profiles on delete cascade,
+  intro text, status text not null default 'pending'
+    check (status in ('pending','approved','rejected')),
+  created_at timestamptz not null default now(), reviewed_at timestamptz,
+  unique (org_id, user_id)
+);
+
+create table events (
+  id bigint generated always as identity primary key,
+  org_id bigint not null references organizations on delete cascade,
+  title text not null, event_date date not null, event_time time,
+  location text, description text,
+  status text not null default 'draft' check (status in ('draft','published')),
+  capacity int,                              -- null = unlimited
+  attendance_taken boolean not null default false,
+  reminder_sent boolean not null default false
+);
+
+create table event_program (
+  id bigint generated always as identity primary key,
+  event_id bigint not null references events on delete cascade,
+  position int not null, start_time time, title text not null, speaker text
+);
+
+create table rsvps (
+  event_id bigint not null references events on delete cascade,
+  user_id uuid not null references profiles on delete cascade,
+  seq bigint generated always as identity,   -- waitlist order (UNIQUE)
+  status text not null check (status in ('going','waitlist')),
+  attended boolean not null default false,
+  primary key (event_id, user_id)
+);
+
+create table bookmarks (
+  user_id uuid not null references profiles on delete cascade,
+  org_id  bigint not null references organizations on delete cascade,
+  primary key (user_id, org_id)
+);
+
+create table notifications (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references profiles on delete cascade,
+  message text not null, is_read boolean not null default false,
+  created_at timestamptz not null default now()
+);
+
+create table announcements (
+  id bigint generated always as identity primary key,
+  org_id bigint not null references organizations on delete cascade,
+  title text not null, body text not null,
+  kind text not null check (kind in ('update','recruitment')),
+  closes_on date, created_at timestamptz not null default now()
+);
+
+create table org_questions (
+  id bigint generated always as identity primary key,
+  org_id bigint not null references organizations on delete cascade,
+  position int not null, question text not null
+);
+
+create table application_answers (
+  id bigint generated always as identity primary key,
+  application_id bigint not null references applications on delete cascade,
+  position int not null, question text not null,  -- question text DENORMALIZED on purpose
+  answer text
+);
+
+-- The single events-visibility predicate, materialized once:
+create view upcoming_events as
+  select * from events where status = 'published' and event_date &gt;= current_date;</code></pre>
+
+  <h3>5.1 Row-Level Security (backstop, not the primary gate)</h3>
+  <table>
+    <tr><th>Table</th><th>Policy sketch</th></tr>
+    <tr><td>profiles</td><td>select/update own row; advisers can select members of their org</td></tr>
+    <tr><td>memberships</td><td>select all (directory is member-gated in app layer); write via service role only</td></tr>
+    <tr><td>organizations</td><td>select all; update only adviser whose <code>org_id</code> matches</td></tr>
+    <tr><td>applications / application_answers</td><td>select own; insert own (pending only); adviser of org can select/update</td></tr>
+    <tr><td>events / event_program</td><td>select published; adviser of org full CRUD</td></tr>
+    <tr><td>rsvps</td><td>select own + counts; insert/update own; adviser of org can update <code>attended</code></td></tr>
+    <tr><td>bookmarks</td><td>own rows only</td></tr>
+    <tr><td>notifications</td><td>own rows only</td></tr>
+    <tr><td>announcements</td><td>select all; write via service role / adviser</td></tr>
+    <tr><td>org_questions</td><td>select all (needed by apply flow); write adviser</td></tr>
+  </table>
+  <div class="note">
+    Server-side query functions use the <strong>service-role client</strong> for trusted server code
+    (mirroring today's single-DB-connection trust model) and the <strong>user client</strong> wherever
+    a browser call is unavoidable (upload confirmations, realtime later). RLS keeps a compromised
+    client from wandering.
+  </div>
+
+  <h3>5.2 Seed parity (<code>supabase/seed.sql</code> ≡ <code>setup.js</code>)</h3>
+  <ul>
+    <li>4 organizations, 43 profiles (all demo password), 37 memberships, 7 applications (mixed statuses), 5 events (1 draft), programs, 12 RSVPs — the "Debugging 101" event seeded <strong>full (12/12)</strong> to demo the waitlist.</li>
+    <li>Dates computed relative to <code>current_date</code> so "upcoming" stays upcoming.</li>
+    <li>One scrypt hash today → seed Supabase auth users via the admin API in a seed script (<code>scripts/seed.ts</code>) instead of raw SQL, since auth users can't be inserted by plain SQL.</li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<section id="access">
+  <h2>6. Access Control</h2>
+
+  <h3>6.1 Portal gate matrix</h3>
+  <table>
+    <tr><th>Visitor hits</th><th>Expected behavior</th></tr>
+    <tr><td><code>/student</code> as adviser</td><td>redirect <code>/admin</code></td></tr>
+    <tr><td><code>/student</code> as student, 0 orgs</td><td>redirect <code>/nonmember</code></td></tr>
+    <tr><td><code>/student</code> as student, incomplete profile</td><td>redirect <code>/student-info</code></td></tr>
+    <tr><td><code>/nonmember</code> as member</td><td>redirect <code>/student</code></td></tr>
+    <tr><td><code>/nonmember</code> as adviser</td><td>redirect <code>/admin</code></td></tr>
+    <tr><td><code>/admin</code> as student</td><td>redirect <code>/student</code> (or <code>/nonmember</code>)</td></tr>
+    <tr><td>any portal anonymously</td><td>redirect <code>/login</code></td></tr>
+  </table>
+
+  <h3>6.2 Enforcement layers</h3>
+  <ol>
+    <li><strong><code>middleware.ts</code></strong> — refresh Supabase session cookies; coarse portal gates above (cheap redirect before render).</li>
+    <li><strong>Page-level guards</strong> — <code>lib/guards.ts</code>: <code>requireAuth()</code>, <code>requireRole('adviser')</code>, <code>requireStudentInfo()</code>, <code>lockNonMembers()</code>, <code>requireOrgMembership(orgId)</code>. Each re-fetches the profile + membership count from the DB — the port of Express's per-request <code>loadUser</code>.</li>
+    <li><strong>Server Action scoping</strong> — every admin action derives <code>org_id</code> from the freshly loaded profile, never from client input.</li>
+    <li><strong>RLS</strong> — final backstop (§5.1).</li>
+  </ol>
+
+  <h3>6.3 Landing logic (port of <code>homeFor()</code>)</h3>
+  <pre><code>adviser                        → /admin
+student &amp;&amp; !profile_complete   → /student-info
+student &amp;&amp; orgCount &gt;= 1       → /student
+student &amp;&amp; orgCount == 0       → /nonmember</code></pre>
+</section>
+
+<!-- ================================================================ -->
+<section id="design">
+  <h2>7. Design System</h2>
+  <p>
+    Tokens are lifted verbatim from <code>public/css/shared/base.css</code>. Keep the
+    <code>data-theme</code> dark-mode switch (localStorage-persisted, no-FOUC inline script in the
+    root layout) and the org brand-color system.
+  </p>
+
+  <h3>7.1 Core tokens (<code>app/globals.css</code>)</h3>
+  <pre><code>:root {
+  /* fixed palette */
+  --green:#173d3a; --navy:#223a58; --yellow:#ffd04a;
+  --coral:#e2604b; --salmon:#e8957f; --teal:#a8d8d0;
+  --lime:#b8dc6f;  --lilac:#c5b0d6;
+
+  /* light theme (default) */
+  --bg:#f4f3ee; --paper:#f7f5ef; --surface:#fff;   --white:#fff;
+  --tan:#efe8dc; --line:#e5e3db; --muted:#6c7b78;
+  --ink:#173d3a; --accent:#173d3a; --on-tile:#173d3a;
+}
+[data-theme="dark"] {
+  --bg:#0b1412; --paper:#152421; --surface:#1b2d29; --white:#1b2d29;
+  --tan:#223530; --line:#2c4641; --muted:#9db1ac;
+  --ink:#e8f0ec; --accent:#7fd4c0;
+}</code></pre>
+
+  <h3>7.2 Organization brand colors (13)</h3>
+  <div class="swatches">
+    <div class="swatch"><div class="chip" style="background:#ffd04a"></div><div class="lbl">yellow</div></div>
+    <div class="swatch"><div class="chip" style="background:#a8d8d0"></div><div class="lbl">teal</div></div>
+    <div class="swatch"><div class="chip" style="background:#b8dc6f"></div><div class="lbl">lime</div></div>
+    <div class="swatch"><div class="chip" style="background:#c5b0d6"></div><div class="lbl">lilac</div></div>
+    <div class="swatch"><div class="chip" style="background:#e8957f"></div><div class="lbl">salmon</div></div>
+    <div class="swatch"><div class="chip" style="background:#9cc9ee"></div><div class="lbl">sky</div></div>
+    <div class="swatch"><div class="chip" style="background:#f0b3c8"></div><div class="lbl">rose</div></div>
+    <div class="swatch"><div class="chip" style="background:#e6d3a8"></div><div class="lbl">sand</div></div>
+    <div class="swatch"><div class="chip" style="background:#1a1d1c"></div><div class="lbl">black</div></div>
+    <div class="swatch"><div class="chip" style="background:#d63b33"></div><div class="lbl">red</div></div>
+    <div class="swatch"><div class="chip" style="background:#7a4b2d"></div><div class="lbl">brown</div></div>
+    <div class="swatch"><div class="chip" style="background:#f58a2e"></div><div class="lbl">orange</div></div>
+    <div class="swatch"><div class="chip" style="background:#fff;border-bottom:1px solid var(--line)"></div><div class="lbl">white</div></div>
+  </div>
+  <p>Each color keeps its <code>.c-&lt;name&gt;</code> class pair (<code>--tile</code> + <code>--on-tile</code>) exactly as in <code>base.css</code> lines 906–971 — copy that block into <code>globals.css</code> unchanged.</p>
+
+  <h3>7.3 Typography</h3>
+  <ul>
+    <li>Display: <strong>Bricolage Grotesque</strong> — headings, stat numbers, org names.</li>
+    <li>Body: <strong>DM Sans</strong> — everything else.</li>
+    <li>Load via <code>next/font/google</code>; expose as CSS variables <code>--font-display</code> / <code>--font-body</code>.</li>
+  </ul>
+
+  <h3>7.4 Component inventory (EJS partial → React)</h3>
+  <table>
+    <tr><th>EJS source</th><th>React component</th><th>Kind</th></tr>
+    <tr><td>head.ejs / foot.ejs</td><td>root <code>layout.tsx</code></td><td>server</td></tr>
+    <tr><td>student/partials/top.ejs</td><td><code>StudentTopBar</code></td><td>server (+ small client nav)</td></tr>
+    <tr><td>admin/partials/top.ejs</td><td><code>AdminSidebar</code> (mobile drawer = client)</td><td>server + client</td></tr>
+    <tr><td>tools.ejs</td><td><code>Toolbar</code> → <code>ThemeToggle</code> · <code>NotificationBell</code> · <code>AvatarMenu</code></td><td>client</td></tr>
+    <tr><td>logo.ejs</td><td><code>&lt;Logo /&gt;</code></td><td>server</td></tr>
+    <tr><td>student/partials/orgcard.ejs</td><td><code>OrgCard</code></td><td>server</td></tr>
+    <tr><td>student/partials/apply_modal.ejs</td><td><code>ApplyModal</code></td><td>client</td></tr>
+    <tr><td>shared/events-body.ejs</td><td><code>EventCalendar</code> (month grid) + <code>EventCard</code> list</td><td>server + client grid</td></tr>
+    <tr><td>shared/event-actions.ejs</td><td><code>RsvpButton</code></td><td>client</td></tr>
+    <tr><td>shared/event-program.ejs</td><td><code>EventProgram</code></td><td>server</td></tr>
+    <tr><td>shared/recruitment-body.ejs</td><td><code>RecruitmentList</code></td><td>server</td></tr>
+    <tr><td>admin/attendance.ejs</td><td><code>AttendanceSheet</code></td><td>client (select-all)</td></tr>
+    <tr><td>admin/events.ejs popup</td><td><code>EventForm</code> modal</td><td>client</td></tr>
+    <tr><td>admin/reports.ejs chart</td><td><code>GrowthChart</code> (CSS bars — no chart lib)</td><td>server</td></tr>
+    <tr><td>utils.js <code>icon()</code></td><td><code>components/icons/</code> — one component per name</td><td>server</td></tr>
+    <tr><td>utils.js <code>fmt*</code>, <code>initials</code>, <code>deptAbbr</code></td><td><code>lib/utils.ts</code> (same names)</td><td>—</td></tr>
+  </table>
+
+  <h3>7.5 Constants</h3>
+  <ul>
+    <li><code>ORG_COLORS</code> — the 13 names above, same order.</li>
+    <li><code>DEPARTMENTS</code> — CITE · COE · CBA · CNHS · CAS · COED (full names in <code>lib/constants.ts</code>).</li>
+    <li><code>ROLES = ['student','adviser']</code>; <code>EMAIL_PATTERN</code>; text clamps per field (port of <code>text()</code>).</li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<section id="features">
+  <h2>8. Feature Specs (the tricky bits)</h2>
+
+  <h3>8.1 RSVP + waitlist state machine</h3>
+  <pre><code>toggleRsvp(eventId, userId):
+  ev = published event, event_date &gt;= today            # else reject
+  r  = existing rsvp
+  if r going   → delete rsvp; promoteWaitlist(ev)      # free seat → first waiting
+  if r waitlist→ delete rsvp
+  else:
+    if capacity is null or going_count &lt; capacity → insert 'going'
+    else → insert 'waitlist' (seq orders the queue)
+
+promoteWaitlist(ev):                                   # used by cancel, capacity raise
+  while capacity is null or going_count &lt; capacity:
+    pick lowest-seq 'waitlist' row → set 'going' + notify; stop if none</code></pre>
+  <p>Runs inside a transaction. Capacity <code>null</code> = unlimited (no waitlist ever). The seed's full event (12/12) must demonstrate join→waitlist→cancel→promotion.</p>
+
+  <h3>8.2 Applications pipeline</h3>
+  <ul>
+    <li>Orgs define ≤ 5 questions (<code>org_questions</code>, ordered).</li>
+    <li>Apply → one <code>applications</code> row (unique per org+user, allows re-apply after rejection) + <code>application_answers</code> rows that <strong>copy the question text</strong> (denormalized on purpose — later edits must not rewrite history).</li>
+    <li>Approve → insert <code>memberships</code> (default 'Member') + notification. Decline → status + notification.</li>
+    <li>Adviser sees pending list with answers inline; question editor saves the full ≤ 5 set.</li>
+    <li>Student badge: pending-application count on the student nav (port of <code>loadBadge</code>).</li>
+  </ul>
+
+  <h3>8.3 Events + program</h3>
+  <ul>
+    <li>Draft/published; only <code>upcoming_events</code> view rows are visible to non-admins.</li>
+    <li>Publish (or draft→publish transition) notifies org members <strong>once</strong> (<code>reminder_sent</code>-style guard or a <code>notified_at</code> column — pick one, document it).</li>
+    <li>Program = ordered segments (<code>HH:MM | title | speaker</code>). Keep the pipe-format textarea + <code>parseProgram()</code>/<code>programToText()</code> in <code>lib/program.ts</code> verbatim; storage stays row-per-segment.</li>
+    <li>Attendance: check-in sheet lists going + waitlist; saving sets <code>attended</code> flags + <code>attendance_taken=1</code>, which flips the reports' attendance metric from RSVP-rate to real check-in rate.</li>
+  </ul>
+
+  <h3>8.4 Notifications fan-out points (insert on…)</h3>
+  <table>
+    <tr><th>Producer</th><th>Recipients</th></tr>
+    <tr><td>Event published</td><td>all org members</td></tr>
+    <tr><td>New announcement (kind=update)</td><td>all org members</td></tr>
+    <tr><td>Application approved / declined</td><td>applicant</td></tr>
+    <tr><td>Member invited</td><td>invitee</td></tr>
+    <tr><td>Waitlist promotion</td><td>promoted user</td></tr>
+    <tr><td>Event reminder job (hourly)</td><td>"going" users for today/tomorrow events</td></tr>
+  </table>
+  <p>Bell shows last 8 + unread count; mark-read flips <code>is_read</code> for the user.</p>
+
+  <h3>8.5 Reminders (pg_cron)</h3>
+  <pre><code>-- hourly
+create function send_event_reminders() returns void as $$
+  insert into notifications (user_id, message)
+  select r.user_id,
+         'Reminder: ' || e.title || ' is on ' || e.event_date ||
+         ' at ' || coalesce(e.event_time::text, 'TBD') || '.'
+  from rsvps r
+  join events e on e.id = r.event_id
+  where r.status = 'going'
+    and e.status = 'published'
+    and e.event_date between current_date and current_date + 1
+    and e.reminder_sent = false;
+
+  update events set reminder_sent = true
+  where status = 'published'
+    and event_date between current_date and current_date + 1;
+$$ language sql;
+
+select cron.schedule('event-reminders', '0 * * * *', 'select send_event_reminders()');</code></pre>
+
+  <h3>8.6 ICS + CSV</h3>
+  <ul>
+    <li><code>lib/generators/ics.ts</code> — port <code>routes/calendar.js</code>: escaping, 75-char line folding, 1-hour default duration, one VEVENT per published/upcoming event.</li>
+    <li><code>lib/generators/csv.ts</code> — port <code>/admin/reports/export</code> string building.</li>
+    <li>Both are pure functions → unit-test them in Phase 10 (first tests this project has ever had).</li>
+  </ul>
+
+  <h3>8.7 Uploads</h3>
+  <ul>
+    <li>Client picks a file → Server Action receives <code>FormData</code> → validate size (≤ 2 MB) + sniffed mime (JPG/PNG/WebP) → upload to <code>avatars/</code> or <code>org-logos/</code> with a <code>{userId|orgId}-</code> prefixed, timestamped name → save the public URL to the row → remove the previous object.</li>
+    <li>Public-read buckets; writes only via server. No raw-body endpoint needed anymore.</li>
+  </ul>
+
+  <h3>8.8 Theme &amp; flash</h3>
+  <ul>
+    <li>Theme: inline no-FOUC script in root layout reads localStorage, sets <code>data-theme</code> on <code>&lt;html&gt;</code>; <code>ThemeToggle</code> flips it.</li>
+    <li>Flash: cookie-based (<code>lib/flash.ts</code>) — action sets <code>omni_flash</code> cookie, portal layout reads + clears and renders <code>&lt;Toast&gt;</code>. Same UX as today's session flash.</li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<section id="phases">
+  <h2>9. Build Phases</h2>
+  <table>
+    <tr><th>#</th><th>Phase</th><th>Deliverable</th><th>Acceptance</th></tr>
+    <tr><td>1</td><td>Scaffold + schema</td>
+      <td>Next.js 15 + TS app; Supabase project; <code>0001_schema.sql</code>; <code>scripts/seed.ts</code> with demo data; <code>upcoming_events</code> view; pg_cron reminder scheduled</td>
+      <td><code>npm run dev</code> boots; seed replicates the 4/43/37/7/5/12 dataset; full-event RSVP count = 12</td></tr>
+    <tr><td>2</td><td>Auth + onboarding + shell</td>
+      <td>login/register/logout actions; <code>middleware.ts</code> gates; <code>PortalShell</code> × 3; <code>/student-info</code>; flash + toast; theme toggle</td>
+      <td>Gate matrix (§6.1) passes for every persona; adviser registration auto-creates an org</td></tr>
+    <tr><td>3</td><td>Design system + UI kit</td>
+      <td><code>globals.css</code> tokens + brand colors; Button/Card/Modal/Badge/Field; icon components; fmt utils</td>
+      <td>Light + dark match the current app's look side-by-side</td></tr>
+    <tr><td>4</td><td>Student portal</td>
+      <td>home, discover (+search/chips), bookmarks, applications, organizations, directory, announcements</td>
+      <td>Every student page renders seeded data; bookmark toggle works; directory member-gated</td></tr>
+    <tr><td>5</td><td>Shared portal features</td>
+      <td><code>ApplyModal</code> + apply action; recruitment; events page + calendar grid + ICS; RSVP/waitlist</td>
+      <td>Full event → waitlist → cancel → promotion verified; ICS downloads valid</td></tr>
+    <tr><td>6</td><td>Non-member portal</td>
+      <td>reduced shell + 4 pages reusing Phase 4/5 components; lifecycle transitions</td>
+      <td>0-org student lands on <code>/nonmember</code>; approval graduates to <code>/student</code></td></tr>
+    <tr><td>7</td><td>Admin portal</td>
+      <td>overview KPIs; organization editor; members (+invite/role/remove); officers; applications (+questions); events CRUD; attendance; announcements; reports + CSV</td>
+      <td>All admin FRs work against seeded data; foreign-org writes rejected</td></tr>
+    <tr><td>8</td><td>Notifications + reminders</td>
+      <td>bell dropdown, unread badge, mark-read; all 6 fan-out points; pg_cron job live</td>
+      <td>Every producer creates rows; reminder fires once per event</td></tr>
+    <tr><td>9</td><td>Uploads + settings</td>
+      <td>avatar + org-logo via Storage; settings page (profile, password, appearance)</td>
+      <td>2 MB + mime enforced; old objects cleaned up</td></tr>
+    <tr><td>10</td><td>Polish + tests</td>
+      <td>responsive pass (mobile drawer, admin sidebar); empty states; rate limiting on auth actions; email verification (optional); unit tests for ics/csv/program/waitlist; Playwright smoke for the gate matrix</td>
+      <td>Definition of done below</td></tr>
+  </table>
+
+  <h3>Definition of done</h3>
+  <ul>
+    <li>Every URL in §4 resolves and matches the seeded app's behavior.</li>
+    <li>Gate matrix §6.1 verified by automated smoke test.</li>
+    <li>Waitlist, apply→approve, publish→notify, reminder flows verified end-to-end.</li>
+    <li>Light/dark visuals reviewed side-by-side against the Express app.</li>
+    <li><code>README.md</code> with setup: Supabase project creation, env vars, <code>supabase db push</code>, <code>npm run seed</code>, <code>npm run dev</code>.</li>
+  </ul>
+</section>
+
+<!-- ================================================================ -->
+<section id="gaps">
+  <h2>10. Known Gaps to Fix in the Rewrite</h2>
+  <table>
+    <tr><th>Gap (today)</th><th>Fix (rewrite)</th></tr>
+    <tr><td>No CSRF protection</td>
+      <td>Server Actions carry built-in origin/nonce checks; the one legacy fetch (<code>/notifications/read</code>) keeps same-origin only. Uploads go through actions, not raw endpoints.</td></tr>
+    <tr><td>No rate limiting</td>
+      <td>Throttle login/register actions (simple Upstash-style limiter or Supabase edge rule).</td></tr>
+    <tr><td>No email verification</td>
+      <td>Enable Supabase email confirm; demo seed users auto-confirm via admin API.</td></tr>
+    <tr><td>Reminders run in-process (dies with server)</td>
+      <td>pg_cron (§8.5).</td></tr>
+    <tr><td><code>.gitignore</code> formatting bug</td>
+      <td>Fresh repo, correct from day one.</td></tr>
+    <tr><td>Zero automated tests</td>
+      <td>Phase 10: unit tests for pure functions + Playwright gate-matrix smoke.</td></tr>
+    <tr><td>Single MySQL connection (one slow query stalls all)</td>
+      <td>Supabase connection pooling (built-in).</td></tr>
+  </table>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    O.M.N.I rewrite blueprint · generated from <code>forloop/</code> (Express + EJS + MySQL) ·
+    companion build prompt: <code>docs/nextjs-prompt.md</code>
+  </div>
+</footer>
+
+</body>
+</html>
